@@ -1,14 +1,44 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Badge, I, Kbd } from '@/src/components/studio-chrome';
-import { EP02_STORYBOARD, CHAR_BY_ID } from '@/src/data/ivamind-mock';
+import { EP02_STORYBOARD, EP_PARTAGE_STORYBOARD, STORYBOARDS, CHAR_BY_ID } from '@/src/data/ivamind-mock';
 
 export default function StoryboardPage() {
   const router = useRouter();
-  const sb = EP02_STORYBOARD;
-  const [selected, setSelected] = useState(sb.panels[6]); // Issa sait (flagship panel)
+  const searchParams = useSearchParams();
+  const epParam = searchParams?.get('ep');
+
+  // Load storyboard dynamique selon ?ep= query param — default EP-02 flagship
+  const sb = (epParam && STORYBOARDS[epParam]) || EP02_STORYBOARD;
+  const [selected, setSelected] = useState(sb.panels[Math.min(6, sb.panels.length - 1)]);
+  const [view, setView] = useState('panels'); // panels | script | timeline | animatic
+
+  // Reset selected when ep changes via URL
+  useEffect(() => {
+    setSelected(sb.panels[Math.min(6, sb.panels.length - 1)]);
+  }, [sb.ep]);
+
+  // Keyboard shortcuts : arrows navigate panels, Space preview, R regen, L lock, N new
+  useEffect(() => {
+    const onKey = (e) => {
+      const t = e.target;
+      if (t.tagName === 'TEXTAREA' || t.tagName === 'INPUT' || t.isContentEditable) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const idx = sb.panels.findIndex(p => p.id === selected.id);
+      if (e.key === 'ArrowRight') { setSelected(sb.panels[Math.min(sb.panels.length - 1, idx + 1)]); e.preventDefault(); }
+      else if (e.key === 'ArrowLeft')  { setSelected(sb.panels[Math.max(0, idx - 1)]); e.preventDefault(); }
+      else if (e.key === 'ArrowDown')  { setSelected(sb.panels[Math.min(sb.panels.length - 1, idx + 4)]); e.preventDefault(); }
+      else if (e.key === 'ArrowUp')    { setSelected(sb.panels[Math.max(0, idx - 4)]); e.preventDefault(); }
+      else if (e.key === 'r' || e.key === 'R') { goToGenerateForPanel(selected, 4); e.preventDefault(); }
+      else if (e.key === 'l' || e.key === 'L') { alert('Lock/unlock panel — endpoint Sprint 1.5'); e.preventDefault(); }
+      else if (e.key === 'n' || e.key === 'N') { alert('New panel — endpoint Sprint 1.5'); e.preventDefault(); }
+      else if (e.key === ' ') { alert(`Preview panel ${selected.id}`); e.preventDefault(); }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [selected, sb.panels]);
 
   // Build prompt from panel context + route to Generate studio
   const goToGenerateForPanel = (panel, variantsCount = 9) => {

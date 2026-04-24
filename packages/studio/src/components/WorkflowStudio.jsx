@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-// IVAMIND 2026-04-24 — Workflow Studio Muapi CRUD (templates/published/executions/node schemas)
-// trop lourd à porter BYOK dans cette passe. Stub propre qui retourne des datasets vides →
-// UI charge mais affiche "use IVAMIND orchestrator instead" via bandeau SANDBOX. Sprint 1.5.
+import dynamic from "next/dynamic";
+
+// IVAMIND 2026-04-24 — Workflow Studio Muapi CRUD stubbé Sprint 1.5.
 const _stubAsync = async (_a, _b) => [];
 const _stubFail = async () => { throw new Error('Workflow Studio BYOK pas encore câblé — utilise /ivamind/new-episode pour l\'orchestrator IVAMIND Series. Sprint 1.5 : porter le node editor complet.'); };
 const getTemplateWorkflows = _stubAsync;
@@ -17,7 +17,6 @@ const getWorkflowInputs = async () => ({ inputs: [] });
 const executeWorkflow = _stubFail;
 const getAllNodeSchemas = async () => ({});
 const getWorkflowData = async () => ({ nodes: [], edges: [] });
-import dynamic from "next/dynamic";
 
 const WorkflowUI = dynamic(() => import("./WorkflowUI"), {
   ssr: false,

@@ -1,17 +1,27 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-// IVAMIND 2026-04-24 — Muapi arraché pour les generations. uploadFile conservé pour upload assets.
-// generateVideo / generateI2V bypassés → fetch direct vers /api/byok/generate/video (Kling).
+// IVAMIND 2026-04-24 — Muapi arraché pour les generations.
 import { uploadFile } from "../muapi.js";
+import {
+  t2vModels,
+  i2vModels,
+  v2vModels,
+  getAspectRatiosForVideoModel,
+  getDurationsForModel,
+  getResolutionsForVideoModel,
+  getAspectRatiosForI2VModel,
+  getDurationsForI2VModel,
+  getResolutionsForI2VModel,
+  getModesForModel,
+} from "../models.js";
 
-// Helpers BYOK pour remplacer generateVideo/generateI2V Muapi.
 async function byokGenerateVideo(params) {
   const resp = await fetch('/api/byok/generate/video', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       prompt: params.prompt,
-      startFrameUrl: params.image_url,  // i2v — l'API route détecte i2v via startFrameUrl
+      startFrameUrl: params.image_url,
       videoRef: params.video_url,
       aspectRatio: params.aspect_ratio,
       duration: params.duration,
@@ -28,18 +38,6 @@ async function byokGenerateVideo(params) {
 }
 const generateVideo = (_apiKey, params) => byokGenerateVideo(params);
 const generateI2V = (_apiKey, params) => byokGenerateVideo(params);
-import {
-  t2vModels,
-  i2vModels,
-  v2vModels,
-  getAspectRatiosForVideoModel,
-  getDurationsForModel,
-  getResolutionsForVideoModel,
-  getAspectRatiosForI2VModel,
-  getDurationsForI2VModel,
-  getResolutionsForI2VModel,
-  getModesForModel,
-} from "../models.js";
 
 // ── tiny helpers ──────────────────────────────────────────────────────────────
 

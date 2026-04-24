@@ -2,8 +2,19 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 // IVAMIND 2026-04-24 — Muapi arraché pour les generations. uploadFile conservé.
-// generateImage / generateI2I bypassés → fetch direct /api/byok/generate/image (Gemini 2.5 Flash Image).
+// generateImage / generateI2I bypassés → fetch direct /api/byok/generate/image.
 import { uploadFile } from "../muapi.js";
+import {
+  t2iModels,
+  i2iModels,
+  getAspectRatiosForModel,
+  getResolutionsForModel,
+  getQualityFieldForModel,
+  getAspectRatiosForI2IModel,
+  getResolutionsForI2IModel,
+  getQualityFieldForI2IModel,
+  getMaxImagesForI2IModel,
+} from "../models.js";
 
 async function byokGenerateImage(params) {
   const refs = [];
@@ -17,7 +28,7 @@ async function byokGenerateImage(params) {
     body: JSON.stringify({
       prompt: params.prompt,
       aspectRatio: params.aspect_ratio,
-      refs: refs.length ? refs.slice(0, 14) : undefined, // Nano Banana 2 Edit supporte 14 refs; Gemini 2.5 cap à 4 côté adapter
+      refs: refs.length ? refs.slice(0, 14) : undefined,
       forceProvider: 'gemini',
       modelHint: params.model,
     }),
@@ -28,17 +39,6 @@ async function byokGenerateImage(params) {
 }
 const generateImage = (_apiKey, params) => byokGenerateImage(params);
 const generateI2I = (_apiKey, params) => byokGenerateImage(params);
-import {
-  t2iModels,
-  i2iModels,
-  getAspectRatiosForModel,
-  getResolutionsForModel,
-  getQualityFieldForModel,
-  getAspectRatiosForI2IModel,
-  getResolutionsForI2IModel,
-  getQualityFieldForI2IModel,
-  getMaxImagesForI2IModel,
-} from "../models.js";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 

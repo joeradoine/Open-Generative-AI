@@ -79,15 +79,25 @@ export function ProgressSegmented({ progress, error }) {
 }
 
 // ─── Sidebar ───
+// NAV_ITEMS = groupes avec dividers. Section "IVAMIND Series" (flow principal) puis "Sandbox studios"
+// (outils généralistes legacy avec bandeaux SANDBOX, BYOK Muapi-arraché).
 const NAV_ITEMS = [
-  { key:'dashboard',    href:'/ivamind/dashboard',    label:'Dashboard',  icon:I.home,     badge:null },
-  { key:'episodes',     href:'/ivamind/dashboard',    label:'Episodes',   icon:I.film,     badge:'5' },
-  { key:'characters',   href:'/ivamind/characters',   label:'Characters', icon:I.users,    badge:'6' },
-  { key:'storyboard',   href:'/ivamind/storyboard',   label:'Storyboard', icon:I.layers,   badge:null },
-  { key:'generate',     href:'/ivamind/generate',     label:'Generate',   icon:I.sparkle,  badge:null },
-  { key:'voice',        href:'/ivamind/voice',        label:'Voice',      icon:I.mic,      badge:null },
-  { key:'workflow',     href:'/ivamind/workflow',     label:'Workflow',   icon:I.workflow, badge:null },
-  { key:'design-system',href:'/ivamind/design-system',label:'Design System', icon:I.book,  badge:null },
+  { section: 'IVAMIND Series' },
+  { key:'dashboard',    href:'/ivamind/dashboard',     label:'Dashboard',     icon:I.home,     badge:null },
+  { key:'episodes',     href:'/ivamind/dashboard',     label:'Episodes',      icon:I.film,     badge:'5' },
+  { key:'characters',   href:'/ivamind/characters',    label:'Characters',    icon:I.users,    badge:'6' },
+  { key:'storyboard',   href:'/ivamind/storyboard',    label:'Storyboard',    icon:I.layers,   badge:null },
+  { key:'generate',     href:'/ivamind/generate',      label:'Generate',      icon:I.sparkle,  badge:null },
+  { key:'voice',        href:'/ivamind/voice',         label:'Voice',         icon:I.mic,      badge:null },
+  { key:'workflow',     href:'/ivamind/workflow',      label:'Workflow',      icon:I.workflow, badge:null },
+  { section: 'Sandbox studios' },
+  { key:'cinema',       href:'/studio/cinema',         label:'Cinema Studio', icon:I.video,    badge:null, hint: 'Contrôles pro (lens/focal/aperture) BYOK Gemini' },
+  { key:'image',        href:'/studio/image',          label:'Image Studio',  icon:I.image,    badge:null, hint: '50+ t2i / 55+ i2i models BYOK' },
+  { key:'video',        href:'/studio/video',          label:'Video Studio',  icon:I.video,    badge:null, hint: 'Kling + Seedance · 40+ t2v / 60+ i2v' },
+  { key:'lipsync',      href:'/studio/lipsync',        label:'Lip Sync',      icon:I.wave,     badge:'S1.4', hint: 'UI live · gen stub Sprint 1.4' },
+  { key:'marketing',    href:'/studio/marketing',      label:'Marketing ads', icon:I.sparkle,  badge:null, hint: 'Product+avatar → ad Kling i2v' },
+  { section: 'Divers' },
+  { key:'design-system',href:'/ivamind/design-system', label:'Design System', icon:I.book,     badge:null },
 ];
 
 export function Sidebar({ collapsed, onToggle, episode }) {
@@ -107,23 +117,34 @@ export function Sidebar({ collapsed, onToggle, episode }) {
       !collapsed && h('div', { style: { flex: 1 } }),
       !collapsed && h('button', { className: 'iconbtn', onClick: onToggle, title: 'Collapse sidebar' }, h(I.sidebar, { size: 14 }))),
 
-    h('nav', { className: 'col gap-1', style: { padding: collapsed ? 6 : 8 } },
-      NAV_ITEMS.map(n => h(Link, {
-        key: n.key, href: n.href,
-        style: {
-          display: 'flex', alignItems: 'center',
-          height: 30, padding: collapsed ? 0 : '0 10px', gap: 10,
-          background: isActive(n.href) ? 'var(--bg-3)' : 'transparent',
-          color: isActive(n.href) ? 'var(--text-0)' : 'var(--text-1)',
-          border: '1px solid ' + (isActive(n.href) ? 'var(--border-600)' : 'transparent'),
-          borderRadius: 'var(--r-2)', cursor: 'pointer',
-          justifyContent: collapsed ? 'center' : 'flex-start',
-          width: '100%', textAlign: 'left', textDecoration: 'none',
+    h('nav', { className: 'col gap-1', style: { padding: collapsed ? 6 : 8, overflowY: 'auto' } },
+      NAV_ITEMS.map((n, i) => {
+        // Section divider row
+        if (n.section) {
+          if (collapsed) return h('div', { key: `sec-${i}`, style: { height: 8 } });
+          return h('div', {
+            key: `sec-${i}`,
+            className: 'section-label',
+            style: { padding: '10px 10px 2px', fontSize: 10, letterSpacing: '0.1em', color: 'var(--text-3)' }
+          }, n.section);
         }
-      },
-        h(n.icon, { size: 15 }),
-        !collapsed && h('span', { className: 't-13', style: { fontWeight: isActive(n.href) ? 500 : 400 } }, n.label),
-        !collapsed && n.badge && h('span', { className: 't-mono t-11', style: { marginLeft: 'auto', color: 'var(--text-3)' } }, n.badge)))),
+        return h(Link, {
+          key: n.key, href: n.href, title: n.hint || n.label,
+          style: {
+            display: 'flex', alignItems: 'center',
+            height: 30, padding: collapsed ? 0 : '0 10px', gap: 10,
+            background: isActive(n.href) ? 'var(--bg-3)' : 'transparent',
+            color: isActive(n.href) ? 'var(--text-0)' : 'var(--text-1)',
+            border: '1px solid ' + (isActive(n.href) ? 'var(--border-600)' : 'transparent'),
+            borderRadius: 'var(--r-2)', cursor: 'pointer',
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            width: '100%', textAlign: 'left', textDecoration: 'none',
+          }
+        },
+          h(n.icon, { size: 15 }),
+          !collapsed && h('span', { className: 't-13', style: { fontWeight: isActive(n.href) ? 500 : 400 } }, n.label),
+          !collapsed && n.badge && h('span', { className: 't-mono t-11', style: { marginLeft: 'auto', color: 'var(--text-3)' } }, n.badge));
+      })),
 
     h('div', { style: { flex: 1 } }),
 
