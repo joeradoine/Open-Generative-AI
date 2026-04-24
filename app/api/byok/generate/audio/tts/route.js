@@ -29,6 +29,6 @@ export async function POST(request) {
     return NextResponse.json({ ...result, routerReason: pick.reason });
   } catch (err) {
     console.error('[byok/generate/audio/tts]', err);
-    return NextResponse.json({ error: err.message, stack: err.stack }, { status: 500 });
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

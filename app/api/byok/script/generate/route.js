@@ -96,6 +96,6 @@ export async function POST(request) {
     });
   } catch (err) {
     console.error('[byok/script/generate]', err);
-    return NextResponse.json({ error: err.message, stack: err.stack }, { status: 500 });
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

@@ -23,6 +23,9 @@ const MAPPED = {
   fish: 'FISH_API_KEY',
   elevenlabs: 'ELEVENLABS_API_KEY',
   muapi: 'MUAPI_API_KEY',
+  anthropic: 'ANTHROPIC_API_KEY',
+  perplexity: 'PERPLEXITY_API_KEY',
+  apify: 'APIFY_API_TOKEN',
 };
 
 async function readEnv() {
@@ -58,7 +61,9 @@ export async function GET() {
   for (const [slot, envKey] of Object.entries(MAPPED)) {
     status[slot] = Boolean(merged[envKey] && String(merged[envKey]).length > 0);
   }
-  return NextResponse.json({ configured: status, envFile: ENV_FILE });
+  // Flat response (aligned with /ivamind/settings page reading status[p.id] directly).
+  // envFile path NOT exposed (security — info de recon pour attaquant distant).
+  return NextResponse.json(status);
 }
 
 export async function POST(request) {
@@ -71,7 +76,7 @@ export async function POST(request) {
     }
     const merged = { ...current, ...updates };
     await writeEnv(merged);
-    return NextResponse.json({ ok: true, written: Object.keys(updates), envFile: ENV_FILE });
+    return NextResponse.json({ ok: true, written: Object.keys(updates) });
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

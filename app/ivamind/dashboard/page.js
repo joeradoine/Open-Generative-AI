@@ -63,8 +63,16 @@ export default function DashboardPage() {
         </div>
         <div style={{ flex: 1 }} />
         <span className="t-mono t-11 muted-2">{filtered.length} / {EPISODES.length} episodes</span>
-        <button className="btn btn-secondary btn-sm"><I.plus size={12} />Season</button>
-        <button className="btn btn-primary btn-sm"><I.plus size={12} />New Episode</button>
+        <button
+          className="btn btn-secondary btn-sm"
+          onClick={() => alert('Création de saison — endpoint /api/byok/seasons/create à câbler Sprint 1.5. En attendant, éditer src/data/ivamind-mock.js directement.')}
+          title="Nouvelle saison"
+        >
+          <I.plus size={12} />Season
+        </button>
+        <Link href="/ivamind/new-episode" className="btn btn-primary btn-sm" style={{ textDecoration: 'none' }}>
+          <I.plus size={12} />New Episode
+        </Link>
       </div>
 
       {/* Main split : table (left) + inspector (right) */}

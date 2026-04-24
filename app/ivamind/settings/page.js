@@ -3,13 +3,17 @@
 import { useEffect, useState } from 'react';
 import { I } from '@/src/components/studio-chrome';
 
+// Slot names doivent matcher les clés du MAPPED dans /api/byok/settings/keys (lowercase camelCase).
 const PROVIDERS = [
-  { id: 'GEMINI_API_KEY',      label: 'Gemini 2.5 Flash Image',  note: 'images persos (i2i) + archi/objets (t2i)' },
-  { id: 'KLING_ACCESS_KEY',    label: 'Kling Access Key',         note: 'vidéo 5s Omni/v3 + element_ids' },
-  { id: 'KLING_SECRET_KEY',    label: 'Kling Secret Key',         note: 'signature requêtes Kling' },
-  { id: 'FISH_API_KEY',        label: 'Fish Audio S1',            note: 'TTS narrateur 4f2a0684...' },
-  { id: 'ELEVENLABS_API_KEY',  label: 'ElevenLabs Scribe v2',     note: 'STT word-level captions' },
-  { id: 'SEEDANCE_API_KEY',    label: 'Seedance',                 note: 'vidéo fallback (adapter stub)' },
+  { id: 'gemini',           label: 'Gemini 2.5 / 3.1 Flash Image',  note: 'images BYOK (i2i bible + t2i décors) — Nano Banana 2 = 14 refs' },
+  { id: 'klingAccessKey',   label: 'Kling Access Key',               note: 'vidéo 5s Omni/v3 + element_ids personnages' },
+  { id: 'klingSecretKey',   label: 'Kling Secret Key',               note: 'signature requêtes Kling (paire avec Access)' },
+  { id: 'seedance',         label: 'Seedance 1.0 Pro',               note: 'vidéo ByteDance Volcano Ark — 10× moins cher que Kling Omni' },
+  { id: 'fish',             label: 'Fish Audio S1',                  note: 'TTS narrateur (Le Narrateur 4f2a0684 speed 1.18)' },
+  { id: 'elevenlabs',       label: 'ElevenLabs Scribe v2',           note: 'STT word-level captions synchro vidéo' },
+  { id: 'anthropic',        label: 'Anthropic Claude Sonnet 4.6',    note: 'Script Whistledown-Manga + recherche orchestrator' },
+  { id: 'perplexity',       label: 'Perplexity Sonar Pro',           note: 'Recherche web 2026 pour alimenter les scripts' },
+  { id: 'apify',            label: 'Apify',                          note: 'TikTok scraping veille (Sprint 1.5)' },
 ];
 
 export default function SettingsPage() {

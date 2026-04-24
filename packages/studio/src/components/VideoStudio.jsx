@@ -11,7 +11,7 @@ async function byokGenerateVideo(params) {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       prompt: params.prompt,
-      startFrame: params.image_url,
+      startFrameUrl: params.image_url,  // i2v — l'API route détecte i2v via startFrameUrl
       videoRef: params.video_url,
       aspectRatio: params.aspect_ratio,
       duration: params.duration,

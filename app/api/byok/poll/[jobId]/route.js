@@ -24,6 +24,6 @@ export async function GET(request, { params }) {
     return NextResponse.json({ ...result, jobId });
   } catch (err) {
     console.error('[byok/poll]', err);
-    return NextResponse.json({ error: err.message, stack: err.stack }, { status: 500 });
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

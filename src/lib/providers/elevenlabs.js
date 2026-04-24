@@ -41,7 +41,8 @@ export class ElevenLabsAdapter {
   async transcribe(params) {
     if (!this.isConfigured()) throw new Error('ElevenLabsAdapter: missing API key');
     const jobId = newJobId('el');
-    const modelId = params.model || 'scribe_v1';
+    // scribe_v2 par défaut (doctrine IVAMIND 2026-04 — précision word-level supérieure v1).
+    const modelId = params.model || 'scribe_v2';
 
     // Resolve audio source to a Blob.
     /** @type {Blob} */
