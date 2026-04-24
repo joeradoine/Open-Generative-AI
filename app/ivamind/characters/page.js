@@ -1,5 +1,6 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { CHARACTERS } from '@/src/data/ivamind-mock';
 import { Badge, I, Kbd } from '@/src/components/studio-chrome';
 
@@ -23,14 +24,31 @@ function refSrc(id, line, slug) {
 
 export default function CharactersPage() {
   const [openId, setOpenId] = useState(null);
-  const openChar = CHARACTERS.find(c => c.id === openId);
+  const [customChars, setCustomChars] = useState([]);
+
+  // Charger les custom characters depuis l'API (filesystem) + localStorage
+  useEffect(() => {
+    fetch('/api/byok/characters/register')
+      .then(r => r.json())
+      .then(data => setCustomChars(data.characters || []))
+      .catch(() => {});
+  }, []);
+
+  const openChar = CHARACTERS.find(c => c.id === openId) || customChars.find(c => c.id === openId);
 
   return (
     <div style={{ padding: '24px' }}>
       <div className="col gap-3" style={{ marginBottom: 20 }}>
-        <span className="section-label gold">Characters · Bible locked</span>
-        <h1 className="t-24" style={{ fontWeight: 600 }}>6 personas IVAMIND</h1>
-        <span className="t-12 muted">Omar + famille. Bible physique verrouillée. Element IDs Kling pour persistence. Click une card → voir les 20 refs.</span>
+        <div className="row gap-3" style={{ alignItems: 'flex-start' }}>
+          <div className="col gap-2 grow">
+            <span className="section-label gold">Characters · Bible locked</span>
+            <h1 className="t-24" style={{ fontWeight: 600 }}>{CHARACTERS.length} bible + {customChars.length} custom</h1>
+            <span className="t-12 muted">Bible IVAMIND verrouillée (Omar + famille · element_ids Kling) + personnages custom style Higgsfield Soul ID (10-20 refs). Click une card → voir refs.</span>
+          </div>
+          <Link href="/ivamind/characters/new" className="btn btn-primary" style={{ textDecoration: 'none' }}>
+            <I.plus size={13} />Register new character
+          </Link>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
@@ -77,6 +95,56 @@ export default function CharactersPage() {
           </div>
         ))}
       </div>
+
+      {/* ═══ CUSTOM CHARACTERS (registered via Soul ID form) ═══ */}
+      {customChars.length > 0 && (
+        <>
+          <div className="col gap-2" style={{ marginTop: 32, marginBottom: 14 }}>
+            <span className="section-label">Custom characters · registered via /ivamind/characters/new</span>
+            <h2 className="t-18" style={{ fontWeight: 600 }}>{customChars.length} personnage{customChars.length > 1 ? 's' : ''} custom</h2>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+            {customChars.map(c => (
+              <div
+                key={c.id}
+                className="card card-hov"
+                onClick={() => setOpenId(c.id)}
+                style={{ padding: 16, cursor: 'pointer', transition: 'border-color .12s' }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--gold)'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = ''}
+              >
+                <div className="row gap-3" style={{ marginBottom: 12 }}>
+                  {c.refUrls?.[0] ? (
+                    <img src={c.refUrls[0]} alt={c.name} style={{
+                      width: 56, height: 56, borderRadius: 12,
+                      objectFit: 'cover',
+                      border: '1px solid var(--border-500)',
+                    }} />
+                  ) : (
+                    <div style={{
+                      width: 56, height: 56, borderRadius: 12,
+                      background: 'var(--bg-3)', color: '#fff',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 22, fontWeight: 700,
+                    }}>{c.name[0]}</div>
+                  )}
+                  <div className="col" style={{ gap: 2 }}>
+                    <span className="t-display t-16">{c.name}</span>
+                    <span className="t-12 muted">{c.photosCount || c.refUrls?.length || 0} refs</span>
+                    <span className="t-11 muted-2 t-mono">custom</span>
+                  </div>
+                </div>
+                {c.description && <div className="t-12 muted" style={{ marginBottom: 8 }}>{c.description.slice(0, 100)}{c.description.length > 100 ? '…' : ''}</div>}
+                {c.outfit && <div className="t-12 muted" style={{ marginBottom: 12, fontStyle: 'italic' }}>{c.outfit.slice(0, 100)}{c.outfit.length > 100 ? '…' : ''}</div>}
+                <div className="row gap-2" style={{ marginBottom: 6 }}>
+                  <Badge variant="gold" icon={I.dot}>{c.klingElementId ? 'Kling element ✓' : 'Gemini i2i ready'}</Badge>
+                </div>
+                {c.klingElementId && <div className="t-mono t-11 muted-2">element_id: {c.klingElementId}</div>}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       {openChar && (
         <CharacterDrawer char={openChar} onClose={() => setOpenId(null)} />
