@@ -141,7 +141,7 @@ export function Sidebar({ collapsed, onToggle, episode }) {
       !collapsed && h('div', { className: 'col grow', style: { lineHeight: 1.15 } },
         h('div', { className: 't-12' }, 'Joe Radoine'),
         h('div', { className: 't-11 muted t-mono' }, 'solo · byok')),
-      !collapsed && h(Link, { href: '/studio/byok-settings', className: 'iconbtn' }, h(I.settings, { size: 13 }))),
+      !collapsed && h(Link, { href: '/ivamind/settings', className: 'iconbtn', title: 'BYOK Settings' }, h(I.settings, { size: 13 }))),
   );
 }
 
@@ -173,7 +173,7 @@ export function TopBar({ breadcrumbs = [], onCmdK, right }) {
 
     right || h('div', { className: 'row gap-2 no-shrink' },
       h('button', { className: 'iconbtn' }, h(I.refresh, { size: 13 })),
-      h('button', { className: 'btn btn-secondary btn-sm' }, h(I.plus, { size: 12 }), 'New episode')));
+      h(Link, { href: '/ivamind/new-episode', className: 'btn btn-primary btn-sm' }, h(I.plus, { size: 12 }), 'New episode')));
 }
 
 // ─── BottomBar ───
@@ -218,7 +218,7 @@ export function CommandPalette({ open, onClose }) {
       { icon: I.mic,    name: 'Voice Studio · active episode',      href: '/ivamind/voice' },
       { icon: I.grid,   name: 'Generation Grid · current shot',     href: '/ivamind/generate' },
       { icon: I.workflow, name: 'Workflow · default pipeline',       href: '/ivamind/workflow' },
-      { icon: I.settings, name: 'BYOK Settings · 6 providers',       href: '/studio/byok-settings' },
+      { icon: I.settings, name: 'BYOK Settings · 6 providers',       href: '/ivamind/settings' },
     ]},
     { label: 'Run', items: [
       { icon: I.run,    name: 'Run full pipeline · EP-03 Tawakkul', shortcut: ['⌘','⏎'] },
@@ -226,7 +226,7 @@ export function CommandPalette({ open, onClose }) {
       { icon: I.export, name: 'Export master · 1080×1920 TikTok',   shortcut: ['⌘','E'] },
     ]},
     { label: 'Create', items: [
-      { icon: I.plus, name: 'New episode from IVAMIND template', shortcut: ['N','E'] },
+      { icon: I.plus, name: 'New episode · wizard 5 étapes', href: '/ivamind/new-episode', shortcut: ['N','E'] },
       { icon: I.plus, name: 'New character ref · upload',        shortcut: ['N','C'] },
     ]},
   ];

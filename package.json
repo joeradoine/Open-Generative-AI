@@ -95,6 +95,7 @@
     }
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.91.0",
     "@google/generative-ai": "^0.24.1",
     "ai-agent": "file:./packages/Open-Poe-AI/packages/agents",
     "axios": "^1.7.0",

@@ -1,14 +1,16 @@
 // IVAMIND Studio — mock data
-// Real state : 2 EPs validés Joe (S1E1 + EP-02 flagship "Issa sait")
+// Real state (Joe 2026-04-24) : 2 EPs postables récents = EP-Partage "Ce qu'on aime" + EP-02 "Issa sait".
+// S1E1 "fatigue invisible" est un pilote palier premium — non-postable (benchmark interne seulement).
+// EP01 PARDON v3 a été validé mais c'est ancien — status "archived".
 
 export const EPISODES = [
   {
-    num:'S1E1', title:'La fatigue invisible d\'une mère',
+    num:'EP-Partage', title:'Ce qu\'on aime',
     status:'Delivered', statusVariant:'green',
-    progress:9, costUSD:2.37, costKling:38, dur:'1:12', shots:11,
-    char:['soukaina','omar','imran','issa','zayed'], updated:'1 w ago',
-    thumbnail:'ivamind-bank-unified/s1e1/p04-soukaina-entree-carrefour.png',
-    note:'Pilote série S1 — fatigue invisible maman caissière Carrefour',
+    progress:9, costUSD:1.25, costKling:18, dur:'1:28', shots:11,
+    char:['omar','radoine'], updated:'3 d ago',
+    thumbnail:'ep-partage/thumbnail-partage-v22.png',
+    note:'Delivered v22 FINAL — Omar et le partage · template IVAMIND EP02+',
   },
   {
     num:'EP-02', title:'Ce que ces enfants savent',
@@ -25,6 +27,21 @@ export const EPISODES = [
     progress:2, costUSD:0.05, costKling:0, dur:'—', shots:12,
     char:['omar','radoine'], updated:'today', active:true,
     note:'En cours — script en rédaction',
+  },
+  {
+    num:'S1E1', title:'La fatigue invisible d\'une mère',
+    status:'Pilot', statusVariant:'neutral',
+    progress:9, costUSD:2.37, costKling:38, dur:'1:12', shots:11,
+    char:['soukaina','omar','imran','issa','zayed'], updated:'1 w ago',
+    thumbnail:'ivamind-bank-unified/s1e1/p04-soukaina-entree-carrefour.png',
+    note:'Pilote palier premium — benchmark interne, NON postable publiquement',
+  },
+  {
+    num:'EP-01', title:'PARDON',
+    status:'Archived', statusVariant:'neutral',
+    progress:9, costUSD:0.70, costKling:10, dur:'1:22', shots:10,
+    char:['omar','radoine','soukaina'], updated:'3 w ago',
+    note:'v3 validé — ancien template, remplacé par EP02+ (archivé)',
   },
   {
     num:'EP-04', title:'La zakat d\'un enfant',
@@ -105,13 +122,13 @@ export const EP02_STORYBOARD = {
   scene:{ name:'Caisse supermarché · Prière', location:'Carrefour Paris', time:'afternoon', mood:'Tender · revelation' },
   script:'La caissière demande si elle a la carte fidélité. Soukaina répond doucement qu\'elle n\'en a pas. Mais regarde bien. En haut, les trois petits. En bas, le tapis qu\'elle vient de dérouler. Quand la prière commence, la sakina descend.',
   panels:[
-    { id:'p01', title:'Soukaina caisse',         status:'locked',  note:'Carte fidélité?', chars:['soukaina'], cam:'medium-35mm', dur:2.8 },
-    { id:'p02', title:'Les trois petits agités', status:'locked',  note:'Imran/Issa/Zayed', chars:['imran','issa','zayed'], cam:'wide-24mm', dur:3.1 },
-    { id:'p03', title:'Tapis de prière déroulé', status:'locked',  note:'Geste invisible', chars:[], cam:'insert-50', dur:1.8 },
-    { id:'p04', title:'Pivot — mais regarde bien', status:'locked', note:'Narrator whisper', chars:[], cam:'extreme-close', dur:2.4 },
-    { id:'p05', title:'Sakina descend',          status:'locked',  note:'Acte 4 révélation', chars:['soukaina'], cam:'low-angle', dur:4.2 },
-    { id:'p06', title:'Les enfants calmés',      status:'locked',  note:'Silence imposé', chars:['imran','issa','zayed'], cam:'wide-symmetric', dur:3.7 },
-    { id:'p07', title:'Issa contemplatif',       status:'locked',  note:'ISSA SAIT — thumbnail shot', chars:['issa'], cam:'close-up-85', dur:2.0 },
-    { id:'p08', title:'Mains qui joignent',      status:'locked',  note:'Geste imitation', chars:['soukaina','issa'], cam:'insert-macro', dur:1.5 },
+    { id:'p01', title:'Soukaina caisse',           status:'locked', note:'Carte fidélité?', chars:['soukaina'], cam:'medium-35mm', dur:2.8, image:'/ivamind-bank-unified/s1e1/p04-soukaina-entree-carrefour.png' },
+    { id:'p02', title:'Les trois petits agités',   status:'locked', note:'Imran/Issa/Zayed', chars:['imran','issa','zayed'], cam:'wide-24mm', dur:3.1, image:'/ep-enfants-priere/p01-trois-petits-explosent.png' },
+    { id:'p03', title:'Tapis de prière déroulé',   status:'locked', note:'Geste invisible', chars:[], cam:'insert-50', dur:1.8, image:'/ep-enfants-priere/h02-issa-roule-tapis.png' },
+    { id:'p04', title:'Pivot — mais regarde bien', status:'locked', note:'Narrator whisper', chars:[], cam:'extreme-close', dur:2.4, image:'/ep-enfants-priere/h08-omar-regard-silencieux.png' },
+    { id:'p05', title:'Sakina descend',            status:'locked', note:'Acte 4 révélation', chars:['soukaina'], cam:'low-angle', dur:4.2, image:'/ep-enfants-priere/h06-sujud-halo-backlight.png' },
+    { id:'p06', title:'Les enfants calmés',        status:'locked', note:'Silence imposé', chars:['imran','issa','zayed'], cam:'wide-symmetric', dur:3.7, image:'/ep-enfants-priere/p05-soukaina-silhouette-tahrim.png' },
+    { id:'p07', title:'Issa contemplatif',         status:'locked', note:'ISSA SAIT — thumbnail shot', chars:['issa'], cam:'close-up-85', dur:2.0, image:'/ep-enfants-priere/p04-zayed-sparkle-yeux.png' },
+    { id:'p08', title:'Mains qui joignent',        status:'locked', note:'Geste imitation', chars:['soukaina','issa'], cam:'insert-macro', dur:1.5, image:'/ep-enfants-priere/h05-soukaina-mains-levees.png' },
   ],
 };

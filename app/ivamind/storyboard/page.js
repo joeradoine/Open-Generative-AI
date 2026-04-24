@@ -48,6 +48,8 @@ export default function StoryboardPage() {
             </span>
           </div>
         </div>
+
+        <StoryboardGuide />
       </div>
 
       {/* 2 columns : panel grid (left) + inspector (right) */}
@@ -118,10 +120,17 @@ export default function StoryboardPage() {
               <div style={{ flex: 1 }} />
               <Badge variant={selected.status === 'locked' ? 'gold' : 'neutral'}>{selected.status}</Badge>
             </div>
-            <div className="ph-stripe gold" style={{ aspectRatio: '9/16', borderRadius: 'var(--r-3)', flexDirection: 'column', gap: 6 }}>
-              <I.image size={22} />
-              <span className="t-mono t-11">Panel {selected.id}</span>
-            </div>
+            {selected.image ? (
+              <img src={selected.image} alt={selected.title} style={{
+                width: '100%', aspectRatio: '9/16', objectFit: 'cover',
+                borderRadius: 'var(--r-3)', border: '1px solid var(--border-500)',
+              }} />
+            ) : (
+              <div className="ph-stripe gold" style={{ aspectRatio: '9/16', borderRadius: 'var(--r-3)', flexDirection: 'column', gap: 6 }}>
+                <I.image size={22} />
+                <span className="t-mono t-11">Panel {selected.id} · à générer</span>
+              </div>
+            )}
             <div className="row gap-2">
               <button className="btn btn-secondary btn-sm" style={{ flex: 1, justifyContent: 'center' }}>
                 <I.refresh size={11} />Regen
@@ -194,11 +203,27 @@ function PanelCard({ panel, index, selected, onClick }) {
         boxShadow: selected ? 'var(--focus)' : 'none',
         transition: 'border-color .12s, box-shadow .12s',
       }}>
-      {/* Placeholder background illustrative */}
-      <div style={{
-        position: 'absolute', inset: 0,
-        background: `linear-gradient(135deg, hsl(${28 + index * 18}, 30%, 18%), hsl(${28 + index * 18}, 22%, 10%))`,
-      }} />
+      {/* Background : vraie image si dispo, sinon placeholder gradient + label */}
+      {panel.image ? (
+        <img src={panel.image} alt={panel.title} loading="lazy" style={{
+          position: 'absolute', inset: 0, width: '100%', height: '100%',
+          objectFit: 'cover', display: 'block',
+        }} />
+      ) : (
+        <>
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: `linear-gradient(135deg, hsl(${28 + index * 18}, 30%, 18%), hsl(${28 + index * 18}, 22%, 10%))`,
+          }} />
+          <div style={{
+            position: 'absolute', inset: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            opacity: 0.35, pointerEvents: 'none',
+          }}>
+            <span className="t-mono t-11 muted-2">No asset · generate →</span>
+          </div>
+        </>
+      )}
 
       {/* Top-left index */}
       <div style={{ position: 'absolute', top: 8, left: 8, padding: '2px 6px',
@@ -234,6 +259,30 @@ function InspectorKV({ k, v }) {
     <div className="row gap-2 t-12">
       <span className="muted-2" style={{ width: 80 }}>{k}</span>
       <span style={{ flex: 1 }}>{v}</span>
+    </div>
+  );
+}
+
+// Guide onboarding 3 étapes — masquable localStorage
+function StoryboardGuide() {
+  const [hidden, setHidden] = useState(false);
+  if (hidden) return null;
+  return (
+    <div className="row gap-3" style={{
+      padding: '10px 12px',
+      background: 'var(--gold-ghost)',
+      border: '1px solid var(--gold)',
+      borderRadius: 'var(--r-2)',
+      alignItems: 'center',
+    }}>
+      <span className="section-label gold">Comment gérer</span>
+      <span className="t-12 muted">
+        <b style={{ color: 'var(--gold)' }}>1.</b> Click une vignette → preview à droite.
+        <b style={{ color: 'var(--gold)', marginLeft: 12 }}>2.</b> Click <Kbd>Regen</Kbd> ou <Kbd>Variants</Kbd> → ouvre Generate studio avec le prompt du panel + bible refs lockées.
+        <b style={{ color: 'var(--gold)', marginLeft: 12 }}>3.</b> Shortliste dans Generate, reviens ici pour lock le panel.
+      </span>
+      <div style={{ flex: 1 }} />
+      <button className="iconbtn" onClick={() => setHidden(true)} title="Hide guide"><I.x size={12} /></button>
     </div>
   );
 }
