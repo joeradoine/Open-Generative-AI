@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { CHARACTERS } from '@/src/data/ivamind-mock';
 import { Badge, I, Kbd } from '@/src/components/studio-chrome';
+import { useActiveCharacter, setActiveCharacter } from '@/src/lib/active-character';
 
 // Matrice 5×4 = 20 refs/persona (4 base + 16 dérivés Gemini i2i)
 const REFS_MATRIX = [

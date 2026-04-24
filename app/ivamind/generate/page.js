@@ -7,6 +7,7 @@ import { CHARACTERS, CHAR_BY_ID } from '@/src/data/ivamind-mock';
 import { CAMERA_PRESETS, PRESET_CATEGORIES, FREE_PRESETS } from '@/src/data/camera-presets';
 import { STYLE_BUNDLES, buildStyleHint } from '@/src/data/camera-styles';
 import { pickSmartRefsMulti } from '@/src/lib/ref-picker';
+import { parseMentions, mentionsToRefs } from '@/src/lib/mention-parser';
 
 const SHOT_PRESETS = [
   {
@@ -82,13 +83,27 @@ export default function GeneratePage() {
 
   // Build refs[] via SMART PICKER — exploite la banque 20 refs/persona selon le contexte shot.
   // Cap : Gemini 2.5 = 4 refs · Nano Banana 2 (Gemini 3.1) = 14 refs.
+  // Parse les @mentions du prompt pour auto-lock les persos (bible + customs).
+  // Exemple : "@omar walks under the rain" → lock Omar bible refs automatiquement.
+  const allChars = [...CHARACTERS, ...customBank];
+  const { mentions: promptMentions } = parseMentions(prompt, allChars);
+
   const buildRefs = () => {
     const cap = useNanoBanana2 ? 14 : 4;
     const refs = [];
-    // 1. Custom uploads user (drag-drop direct)
+    // 1. Custom uploads user (drag-drop direct) — max priorité
     customRefs.forEach(r => refs.push({ url: r.dataUrl, role: 'custom-upload', label: r.name, reason: 'uploadé par l\'utilisateur' }));
 
-    // 2. Custom character registered (Soul ID-style) — inject ses refUrls
+    // 2. @mentions dans le prompt — Higgsfield-style auto-lock
+    if (promptMentions.length > 0 && refs.length < cap) {
+      const mentionRefs = mentionsToRefs(promptMentions, cap - refs.length);
+      for (const r of mentionRefs) {
+        if (refs.length >= cap) break;
+        refs.push(r);
+      }
+    }
+
+    // 3. Custom character registered (Soul ID-style) — inject ses refUrls
     if (selectedCustomId && refs.length < cap) {
       const customChar = customBank.find(c => c.id === selectedCustomId);
       if (customChar?.refUrls?.length) {
@@ -99,7 +114,7 @@ export default function GeneratePage() {
       }
     }
 
-    // 3. Bible IVAMIND refs (smart picker L1-L5)
+    // 4. Bible IVAMIND refs (smart picker L1-L5) — fallback si pas de mention/custom
     if (lockToBible && refs.length < cap) {
       const context = {
         prompt,
@@ -313,7 +328,43 @@ export default function GeneratePage() {
               onChange={e => setPrompt(e.target.value)}
               rows={10}
               style={{ height:'auto', minHeight: 160, padding: 10, fontFamily:'var(--f-sans)', fontSize: 12, lineHeight: 1.5, resize:'vertical' }}
+              placeholder="Décris la scène. Utilise @omar, @soukaina, @radoine, @imran, @issa, @zayed ou tes persos custom pour auto-lock les refs."
             />
+
+            {/* @mentions détectées dans le prompt — auto-lock comme Higgsfield */}
+            {promptMentions.length > 0 && (
+              <div className="col gap-1" style={{ marginTop: 4 }}>
+                <span className="t-11 gold" style={{ fontWeight: 500 }}>
+                  🔒 {promptMentions.length} perso{promptMentions.length > 1 ? 's' : ''} auto-locked via @mention :
+                </span>
+                <div className="row gap-2" style={{ flexWrap: 'wrap' }}>
+                  {promptMentions.map((m, i) => {
+                    const c = m.char;
+                    const firstRef = c.refUrl || c.refUrls?.[0];
+                    return (
+                      <div key={i} className="row gap-2" style={{
+                        padding: '3px 10px 3px 3px',
+                        borderRadius: 999,
+                        border: '1px solid var(--gold)',
+                        background: 'var(--gold-ghost)',
+                      }}>
+                        {firstRef ? (
+                          <img src={firstRef} alt={c.name} style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover' }} />
+                        ) : (
+                          <span style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--bg-3)',
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 10, fontWeight: 600, color: '#fff',
+                          }}>{c.name[0]}</span>
+                        )}
+                        <span className="t-mono t-11 gold">{m.raw}</span>
+                        <span className="t-11" style={{ color: 'var(--text-0)' }}>{c.name}</span>
+                        <span className="t-11 muted-2">{c.element || c.klingElementId ? 'Kling el_id' : 'Gemini refs'}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Camera preset picker */}
             <div className="row gap-2" style={{ marginTop: 4 }}>
