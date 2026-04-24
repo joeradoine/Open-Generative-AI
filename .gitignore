@@ -36,3 +36,13 @@ out/
 .env
 .env.*
 !.env.example
+
+# BYOK Provider Layer — generated assets (Sprint 1.1)
+public/byok-output/**/*.png
+public/byok-output/**/*.jpg
+public/byok-output/**/*.jpeg
+public/byok-output/**/*.webp
+public/byok-output/**/*.mp3
+public/byok-output/**/*.wav
+public/byok-output/**/*.mp4
+public/byok-output/**/*.json
