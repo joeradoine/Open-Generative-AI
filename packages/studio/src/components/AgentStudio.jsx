@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import {
-  getTemplateAgents,
-  getUserAgents,
-  getUserConversations,
-} from "../muapi.js";
+// IVAMIND 2026-04-24 — Agent Studio CRUD Muapi stubbé (templates/users/conversations).
+// Sprint 1.5 si usage réel. En attendant, UI charge avec datasets vides.
+const getTemplateAgents = async () => [];
+const getUserAgents = async () => [];
+const getUserConversations = async () => [];
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 function timeAgo(dateStr) {
@@ -188,7 +188,18 @@ export default function AgentStudio({ apiKey }) {
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="h-full flex flex-col bg-[#030303] text-white">
+    <div className="h-full flex flex-col bg-[#030303] text-white relative">
+      {/* ── IVAMIND SANDBOX banner ── */}
+      <div className="flex-shrink-0 flex items-center justify-between gap-4 px-4 py-2 text-xs" style={{
+        background: 'linear-gradient(90deg, rgba(249,178,51,0.18), rgba(249,178,51,0.06))',
+        borderBottom: '1px solid rgba(249,178,51,0.45)', color: '#f9b233',
+      }}>
+        <span className="flex items-center gap-2">
+          <span className="font-bold tracking-widest">⚡ SANDBOX</span>
+          <span className="opacity-85">Agent Studio legacy · conversations Muapi stubbées. Sprint 1.5 pour BYOK complet (ou utilise <a href="https://console.anthropic.com" style={{ color:'#f9b233', textDecoration:'underline' }}>Anthropic Console</a> en attendant).</span>
+        </span>
+        <a href="/ivamind/dashboard" className="underline opacity-80 hover:opacity-100">← Retour IVAMIND</a>
+      </div>
       {/* Header */}
       <div className="flex-shrink-0 h-16 border-b border-white/5 flex items-center justify-between px-8 bg-black/40">
         <div className="flex items-center gap-8 h-full">

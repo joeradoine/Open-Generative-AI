@@ -2,18 +2,21 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import {
-  getTemplateWorkflows,
-  getUserWorkflows,
-  getPublishedWorkflows,
-  createWorkflow,
-  updateWorkflowName,
-  deleteWorkflow,
-  getWorkflowInputs,
-  executeWorkflow,
-  getAllNodeSchemas,
-  getWorkflowData,
-} from "../muapi.js";
+// IVAMIND 2026-04-24 — Workflow Studio Muapi CRUD (templates/published/executions/node schemas)
+// trop lourd à porter BYOK dans cette passe. Stub propre qui retourne des datasets vides →
+// UI charge mais affiche "use IVAMIND orchestrator instead" via bandeau SANDBOX. Sprint 1.5.
+const _stubAsync = async (_a, _b) => [];
+const _stubFail = async () => { throw new Error('Workflow Studio BYOK pas encore câblé — utilise /ivamind/new-episode pour l\'orchestrator IVAMIND Series. Sprint 1.5 : porter le node editor complet.'); };
+const getTemplateWorkflows = _stubAsync;
+const getUserWorkflows = _stubAsync;
+const getPublishedWorkflows = _stubAsync;
+const createWorkflow = _stubFail;
+const updateWorkflowName = _stubFail;
+const deleteWorkflow = _stubFail;
+const getWorkflowInputs = async () => ({ inputs: [] });
+const executeWorkflow = _stubFail;
+const getAllNodeSchemas = async () => ({});
+const getWorkflowData = async () => ({ nodes: [], edges: [] });
 import dynamic from "next/dynamic";
 
 const WorkflowUI = dynamic(() => import("./WorkflowUI"), {
@@ -835,7 +838,18 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
 
   // Render main workflow list
   return (
-    <div className="h-full w-full flex flex-col p-8 overflow-y-auto custom-scrollbar">
+    <div className="h-full w-full flex flex-col p-8 pt-14 overflow-y-auto custom-scrollbar relative">
+      {/* ── IVAMIND SANDBOX banner (absolute top) ── */}
+      <div className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between gap-4 px-4 py-2 text-xs" style={{
+        background: 'linear-gradient(90deg, rgba(249,178,51,0.18), rgba(249,178,51,0.06))',
+        borderBottom: '1px solid rgba(249,178,51,0.45)', color: '#f9b233',
+      }}>
+        <span className="flex items-center gap-2">
+          <span className="font-bold tracking-widest">⚡ SANDBOX</span>
+          <span className="opacity-85">Workflow Studio legacy · CRUD Muapi stubbé. Pour orchestrer IVAMIND utilise <a href="/ivamind/new-episode" style={{ color:'#f9b233', textDecoration:'underline' }}>/ivamind/new-episode</a>. Sprint 1.5 : porter le node editor.</span>
+        </span>
+        <a href="/ivamind/dashboard" className="underline opacity-80 hover:opacity-100">← Retour IVAMIND</a>
+      </div>
       <div className="max-w-7xl mx-auto w-full">
         <div className="flex flex-col gap-6 mb-12">
           <div className="flex items-end justify-between">

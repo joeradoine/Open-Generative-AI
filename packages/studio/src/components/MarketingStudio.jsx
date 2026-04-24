@@ -1,7 +1,31 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { uploadFile, generateMarketingStudioAd } from "../muapi.js";
+// IVAMIND 2026-04-24 — Muapi arraché. generateMarketingStudioAd → byok video (Kling/Seedance)
+// avec prompt augmenté product + ad. uploadFile conservé (upload images produit/avatar).
+import { uploadFile } from "../muapi.js";
+
+async function generateMarketingStudioAd(_apiKey, params) {
+  // Compose prompt ad : product visual + tagline + aspect ratio
+  const refs = [];
+  (params.images_list || []).forEach(url => {
+    if (url) refs.push({ url, role: 'ref' });
+  });
+  const resp = await fetch('/api/byok/generate/video', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      prompt: params.prompt,
+      aspectRatio: params.aspect_ratio,
+      duration: params.duration,
+      resolution: params.resolution,
+      startFrame: refs[0]?.url, // première image = start frame pour i2v
+      forceProvider: 'kling', // préférence Kling Omni pour ads
+    }),
+  });
+  const data = await resp.json();
+  if (!resp.ok || data.status !== 'succeeded') throw new Error(data.error || 'ad gen failed');
+  return { url: data.assets?.[0]?.url, id: data.jobId, providerId: data.providerId };
+}
 
 const SCROLLBAR_STYLE = `
   .custom-scrollbar-thin::-webkit-scrollbar {
@@ -367,7 +391,18 @@ export default function MarketingStudio({ apiKey, droppedFiles, onFilesHandled }
   return (
     <div className="w-full h-full flex flex-col items-center justify-center bg-app-bg relative p-4 md:p-6 overflow-hidden">
       <style>{SCROLLBAR_STYLE}</style>
-      
+      {/* ── IVAMIND SANDBOX — Muapi arraché, BYOK Kling ── */}
+      <div className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between gap-4 px-4 py-2 text-xs" style={{
+        background: 'linear-gradient(90deg, rgba(249,178,51,0.18), rgba(249,178,51,0.06))',
+        borderBottom: '1px solid rgba(249,178,51,0.45)', color: '#f9b233',
+      }}>
+        <span className="flex items-center gap-2">
+          <span className="font-bold tracking-widest">⚡ SANDBOX</span>
+          <span className="opacity-85">Marketing Studio BYOK · ads generées via Kling i2v avec product image comme start frame</span>
+        </span>
+        <a href="/ivamind/dashboard" className="underline opacity-80 hover:opacity-100">← Retour IVAMIND</a>
+      </div>
+
       {/* ── MAIN CONTENT AREA ── */}
       <div className="flex-1 overflow-y-auto custom-scrollbar p-6 pb-40">
         {history.length > 0 ? (
