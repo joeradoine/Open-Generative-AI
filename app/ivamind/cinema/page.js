@@ -19,15 +19,35 @@ const ASPECT_OPTIONS = [
 ];
 const MODE_OPTIONS = ['image', 'video'];
 
+// Le Cinema Studio IVAMIND ne génère RIEN lui-même — il structure le prompt + refs + element_ids
+// et route vers le modèle sous-jacent choisi. Modèles exposés par notre Provider Layer BYOK :
+const IMAGE_MODELS = [
+  { id: 'gemini-2.5',    label: 'Gemini 2.5 Flash Image',  provider: 'gemini',  cost: '~$0.04',  maxRefs: 4,  badge: 'default' },
+  { id: 'nano-banana-2', label: 'Nano Banana 2 (Gemini 3.1)', provider: 'gemini', modelHint: 'nano-banana-2', cost: '~$0.05', maxRefs: 14, badge: 'best refs' },
+];
+const VIDEO_MODELS = [
+  { id: 'kling-omni',       label: 'Kling 3.0 Omni Pro',       provider: 'kling',    modelHint: 'kling-v3-omni-pro',  cost: '10u/5s',  badge: 'best quality · element_ids' },
+  { id: 'kling-basic',      label: 'Kling basic v3',           provider: 'kling',    modelHint: 'kling-v3-basic',     cost: '4u/5s',   badge: 'fast' },
+  { id: 'seedance-pro',     label: 'Seedance 1.0 Pro',         provider: 'seedance', modelHint: 'seedance-1.0-pro-250528', cost: '~$0.10/5s', badge: 'cheapest · 10× Kling' },
+  { id: 'seedance-lite',    label: 'Seedance 1.0 Lite',        provider: 'seedance', modelHint: 'seedance-1.0-lite-250528', cost: '~$0.05/5s', badge: 'ultra cheap' },
+];
+
 export default function CinemaIvamindPage() {
   const [mode, setMode] = useState('image');
+  const [imageModelId, setImageModelId] = useState('gemini-2.5');
+  const [videoModelId, setVideoModelId] = useState('seedance-pro');  // cheapest default
   const [prompt, setPrompt] = useState('');
   const [cameraPreset, setCameraPreset] = useState(null);
   const [styleBundle, setStyleBundle] = useState('ivamind-manga-series');
   const [aspectRatio, setAspectRatio] = useState('9:16');
-  const [useNanoBanana2, setUseNanoBanana2] = useState(false);
   const [multiShot, setMultiShot] = useState(false);
   const [duration, setDuration] = useState(5);
+
+  // Active model = celui sélectionné selon mode courant
+  const activeModel = mode === 'image'
+    ? IMAGE_MODELS.find(m => m.id === imageModelId) || IMAGE_MODELS[0]
+    : VIDEO_MODELS.find(m => m.id === videoModelId) || VIDEO_MODELS[0];
+  const useNanoBanana2 = imageModelId === 'nano-banana-2';
   const [running, setRunning] = useState(false);
   const [history, setHistory] = useState([]);
   const [customBank, setCustomBank] = useState([]);
@@ -95,30 +115,36 @@ export default function CinemaIvamindPage() {
   const generateOne = async (seed) => {
     const refs = buildRefs();
     const finalPrompt = buildFinalPrompt();
+    // AI Director pattern : on route vers le modèle choisi, on ne génère rien nous-même.
+    const model = activeModel;
     if (mode === 'image') {
       const resp = await fetch('/api/byok/generate/image', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: finalPrompt, aspectRatio, seed,
-          forceProvider: 'gemini',
-          modelHint: useNanoBanana2 ? 'nano-banana-2' : undefined,
+          forceProvider: model.provider,
+          modelHint: model.modelHint,
           refs: refs.length ? refs : undefined,
         }),
       });
       const d = await resp.json();
       if (!resp.ok || d.status !== 'succeeded') throw new Error(d.error || 'gen failed');
-      return { url: d.assets?.[0]?.url, kind: 'image', provider: d.providerId, seed, prompt: finalPrompt, mentions: mentions.map(m => m.char.name) };
+      return { url: d.assets?.[0]?.url, kind: 'image', provider: d.providerId, model: model.label, seed, prompt: finalPrompt, mentions: mentions.map(m => m.char.name), refCount: refs.length };
     } else {
+      // Si on a des mentions avec element_id Kling locked, envoyer comme elementIds (Kling Omni)
+      const elementIds = mentions.map(m => m.char.element || m.char.klingElementId).filter(Boolean);
       const resp = await fetch('/api/byok/generate/video', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: finalPrompt, aspectRatio, duration,
-          forceProvider: 'seedance',
+          forceProvider: model.provider,
+          modelHint: model.modelHint,
+          elementIds: elementIds.length ? elementIds : undefined,
         }),
       });
       const d = await resp.json();
       if (!resp.ok || d.status !== 'succeeded') throw new Error(d.error || 'gen failed');
-      return { url: d.assets?.[0]?.url, kind: 'video', provider: d.providerId, duration, prompt: finalPrompt };
+      return { url: d.assets?.[0]?.url, kind: 'video', provider: d.providerId, model: model.label, duration, prompt: finalPrompt, mentions: mentions.map(m => m.char.name), elementIds };
     }
   };
 
@@ -268,8 +294,16 @@ export default function CinemaIvamindPage() {
             </button>
           </div>
 
-          {/* Bottom tags row */}
+          {/* Bottom tags row — Director Panel tags */}
           <div className="row gap-2" style={{ flexWrap: 'wrap' }}>
+            {/* AI Director pattern : sélecteur MODÈLE sous-jacent */}
+            {mode === 'image' ? (
+              <TagSelect label="Model" value={imageModelId} onChange={setImageModelId}
+                options={IMAGE_MODELS.map(m => ({ value: m.id, label: `${m.label} · ${m.cost}` }))} />
+            ) : (
+              <TagSelect label="Model" value={videoModelId} onChange={setVideoModelId}
+                options={VIDEO_MODELS.map(m => ({ value: m.id, label: `${m.label} · ${m.cost}` }))} />
+            )}
             <TagSelect label="Movement" value={cameraPreset} onChange={setCameraPreset}
               options={[{ value: '', label: 'Static framing' }, ...CAMERA_PRESETS.filter(p => p.category === 'static').map(p => ({ value: p.id, label: p.label }))]} />
             <TagSelect label="Style" value={styleBundle} onChange={setStyleBundle}
@@ -280,15 +314,16 @@ export default function CinemaIvamindPage() {
               <TagSelect label="Duration" value={duration} onChange={v => setDuration(Number(v))}
                 options={[{ value: 5, label: '5s' }, { value: 10, label: '10s' }]} />
             )}
-            <Tag onClick={() => setUseNanoBanana2(v => !v)} active={useNanoBanana2}>
-              Nano Banana 2 · 14 refs {useNanoBanana2 ? '✓' : '—'}
-            </Tag>
             <Tag onClick={() => setMultiShot(v => !v)} active={multiShot}>
               Multi-shot × 4 {multiShot ? '✓' : '—'}
             </Tag>
             <div style={{ flex: 1 }} />
-            <span className="t-11 muted-2" style={{ alignSelf: 'center' }}>
-              {buildRefs().length}/{cap} refs · {mentions.length} @mentions
+            <span className="t-11 muted-2" style={{ alignSelf: 'center', display: 'flex', gap: 8 }}>
+              <span>{buildRefs().length}/{cap} refs</span>
+              <span>·</span>
+              <span>{mentions.length} @mentions</span>
+              <span>·</span>
+              <span className="gold t-mono">→ {activeModel.provider}</span>
             </span>
           </div>
         </div>
