@@ -205,11 +205,14 @@ export default function StandaloneShell() {
 
   if (!hasMounted) return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center">
-      <div className="animate-spin text-[#d9ff00] text-3xl">◌</div>
+      <div className="animate-spin text-[#f9b233] text-3xl">◌</div>
     </div>
   );
 
-  if (!apiKey) {
+  // [IVAMIND] Muapi gate bypassed — BYOK mode (Gemini/Kling/Seedance/Fish/ElevenLabs direct via Provider Layer).
+  // Original gate preserved for rollback — set BYOK_BYPASS=false to restore.
+  const BYOK_BYPASS = true;
+  if (!BYOK_BYPASS && !apiKey) {
     return <ApiKeyModal onSave={handleKeySave} />;
   }
 
@@ -223,9 +226,9 @@ export default function StandaloneShell() {
     >
       {/* Drag Overlay */}
       {isDragging && (
-        <div className="fixed inset-0 z-[100] bg-[#d9ff00]/10 backdrop-blur-md border-4 border-dashed border-[#d9ff00]/50 flex items-center justify-center pointer-events-none transition-all duration-300">
+        <div className="fixed inset-0 z-[100] bg-[#f9b233]/10 backdrop-blur-md border-4 border-dashed border-[#f9b233]/50 flex items-center justify-center pointer-events-none transition-all duration-300">
           <div className="bg-[#0a0a0a] p-8 rounded-3xl border border-white/10 shadow-2xl flex flex-col items-center gap-4 scale-110 animate-pulse">
-            <div className="w-20 h-20 bg-[#d9ff00] rounded-2xl flex items-center justify-center">
+            <div className="w-20 h-20 bg-[#f9b233] rounded-2xl flex items-center justify-center">
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2.5">
                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
               </svg>
@@ -259,13 +262,13 @@ export default function StandaloneShell() {
                 onClick={() => handleTabChange(tab.id)}
                 className={`relative py-4 text-[13px] font-medium transition-all whitespace-nowrap px-1 ${
                   activeTab === tab.id
-                    ? 'text-[#d9ff00]'
+                    ? 'text-[#f9b233]'
                     : 'text-white/50 hover:text-white'
                 }`}
               >
                 {tab.label}
                 {activeTab === tab.id && (
-                  <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#d9ff00] rounded-full" />
+                  <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#f9b233] rounded-full" />
                 )}
               </button>
             ))}
@@ -284,7 +287,7 @@ export default function StandaloneShell() {
 
             <div 
               onClick={() => setShowSettings(true)}
-              className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#d9ff00] to-yellow-200 border border-white/20 cursor-pointer hover:scale-105 transition-transform" 
+              className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#f9b233] to-yellow-200 border border-white/20 cursor-pointer hover:scale-105 transition-transform" 
             />
           </div>
         </header>

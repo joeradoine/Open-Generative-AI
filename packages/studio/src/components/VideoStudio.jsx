@@ -47,7 +47,7 @@ const CheckSvg = () => (
     height="16"
     viewBox="0 0 24 24"
     fill="none"
-    stroke="#d9ff00"
+    stroke="#f9b233"
     strokeWidth="4"
   >
     <polyline points="20 6 9 17 4 12" />
@@ -81,7 +81,7 @@ const VideoReadySvg = () => (
   >
     <polygon points="23 7 16 12 23 17 23 7" />
     <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-    <polyline points="7 10 10 13 15 8" stroke="#d9ff00" strokeWidth="2.5" />
+    <polyline points="7 10 10 13 15 8" stroke="#f9b233" strokeWidth="2.5" />
   </svg>
 );
 
@@ -1313,12 +1313,12 @@ export default function VideoStudio({
                   onClick={toggleDropdown("model")}
                   className="flex items-center gap-2 px-3 py-2 bg-white/[0.03] hover:bg-white/[0.06] rounded-md transition-all border border-white/[0.03] group whitespace-nowrap"
                 >
-                  <div className="w-4 h-4 bg-[#d9ff00] rounded flex items-center justify-center shadow-lg shadow-[#d9ff00]/10">
+                  <div className="w-4 h-4 bg-[#f9b233] rounded flex items-center justify-center shadow-lg shadow-[#f9b233]/10">
                     <span className="text-[9px] font-bold text-black uppercase">
                       V
                     </span>
                   </div>
-                  <span className="text-xs font-semibold text-white/70 group-hover:text-[#d9ff00] transition-colors">
+                  <span className="text-xs font-semibold text-white/70 group-hover:text-[#f9b233] transition-colors">
                     {selectedModelName}
                   </span>
                   <svg
@@ -1375,7 +1375,7 @@ export default function VideoStudio({
                         ry="2"
                       />
                     </svg>
-                    <span className="text-[11px] font-semibold text-white/70 group-hover:text-[#d9ff00] transition-colors">
+                    <span className="text-[11px] font-semibold text-white/70 group-hover:text-[#f9b233] transition-colors">
                       {selectedAr}
                     </span>
                   </button>
@@ -1431,7 +1431,7 @@ export default function VideoStudio({
                       <circle cx="12" cy="12" r="10" />
                       <polyline points="12 6 12 12 16 14" />
                     </svg>
-                    <span className="text-xs font-semibold text-white/70 group-hover:text-[#d9ff00] transition-colors">
+                    <span className="text-xs font-semibold text-white/70 group-hover:text-[#f9b233] transition-colors">
                       {selectedDuration}s
                     </span>
                   </button>
@@ -1486,7 +1486,7 @@ export default function VideoStudio({
                     >
                       <path d="M6 2L3 6v15a2 2 0 002 2h14a2 2 0 002-2V6l-3-4H6z" />
                     </svg>
-                    <span className="text-[11px] font-semibold text-white/70 group-hover:text-[#d9ff00] transition-colors">
+                    <span className="text-[11px] font-semibold text-white/70 group-hover:text-[#f9b233] transition-colors">
                       {selectedResolution || "720p"}
                     </span>
                   </button>
@@ -1528,7 +1528,7 @@ export default function VideoStudio({
               type="button"
               onClick={handleGenerate}
               disabled={generating}
-              className="bg-[#d9ff00] text-black px-4 py-2 rounded-md font-medium text-sm hover:bg-[#e5ff33] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 w-full sm:w-auto shadow-lg shadow-[#d9ff00]/10 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-[#f9b233] text-black px-4 py-2 rounded-md font-medium text-sm hover:bg-[#fbc84a] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 w-full sm:w-auto shadow-lg shadow-[#f9b233]/10 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {generating ? (
                 <>

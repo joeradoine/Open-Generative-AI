@@ -679,7 +679,7 @@ function ModelDropdown({ models, selectedModel, onSelect, onClose }) {
                 height="16"
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke="#d9ff00"
+                stroke="#f9b233"
                 strokeWidth="4"
               >
                 <polyline points="20 6 9 17 4 12" />
@@ -720,7 +720,7 @@ function SimpleDropdown({ title, options, selected, onSelect, onClose }) {
                 height="16"
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke="#d9ff00"
+                stroke="#f9b233"
                 strokeWidth="4"
               >
                 <polyline points="20 6 9 17 4 12" />
@@ -1236,10 +1236,10 @@ export default function ImageStudio({
                   }}
                   className="flex items-center gap-2 px-3 py-2 bg-white/[0.03] hover:bg-white/[0.06] rounded-md transition-all border border-white/[0.03] group whitespace-nowrap"
                 >
-                  <div className="w-4 h-4 bg-[#d9ff00] rounded flex items-center justify-center">
+                  <div className="w-4 h-4 bg-[#f9b233] rounded flex items-center justify-center">
                     <span className="text-[9px] font-bold text-black uppercase">G</span>
                   </div>
-                  <span className="text-xs font-semibold text-white/70 group-hover:text-[#d9ff00] transition-colors">
+                  <span className="text-xs font-semibold text-white/70 group-hover:text-[#f9b233] transition-colors">
                     {selectedModelName}
                   </span>
                   <svg
@@ -1284,7 +1284,7 @@ export default function ImageStudio({
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="opacity-40 text-white">
                     <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
                   </svg>
-                  <span className="text-[11px] font-semibold text-white/70 group-hover:text-[#d9ff00] transition-colors">
+                  <span className="text-[11px] font-semibold text-white/70 group-hover:text-[#f9b233] transition-colors">
                     {selectedAr}
                   </span>
                 </button>
@@ -1319,7 +1319,7 @@ export default function ImageStudio({
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="opacity-40 text-white">
                       <path d="M6 2L3 6v15a2 2 0 002 2h14a2 2 0 002-2V6l-3-4H6z" />
                     </svg>
-                    <span className="text-[11px] font-semibold text-white/70 group-hover:text-[#d9ff00] transition-colors">
+                    <span className="text-[11px] font-semibold text-white/70 group-hover:text-[#f9b233] transition-colors">
                       {selectedQuality || currentResolutions[0]}
                     </span>
                   </button>
@@ -1350,7 +1350,7 @@ export default function ImageStudio({
                     onClick={() => setBatchSize(num)}
                     className={`w-7 h-7 flex items-center justify-center rounded-md text-[10px] font-black transition-all ${
                       batchSize === num
-                        ? "bg-[#d9ff00] text-black shadow-lg shadow-[#d9ff00]/20"
+                        ? "bg-[#f9b233] text-black shadow-lg shadow-[#f9b233]/20"
                         : "text-white/40 hover:text-white/80 hover:bg-white/5"
                     }`}
                   >
@@ -1365,7 +1365,7 @@ export default function ImageStudio({
               type="button"
               onClick={handleGenerate}
               disabled={generating}
-              className="bg-[#d9ff00] text-black px-4 py-2 rounded-md font-medium text-sm hover:bg-[#e5ff33] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 w-full sm:w-auto shadow-lg shadow-[#d9ff00]/10 disabled:opacity-50 disabled:cursor-not-allowed z-10"
+              className="bg-[#f9b233] text-black px-4 py-2 rounded-md font-medium text-sm hover:bg-[#fbc84a] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 w-full sm:w-auto shadow-lg shadow-[#f9b233]/10 disabled:opacity-50 disabled:cursor-not-allowed z-10"
             >
               {generating ? (
                 <>

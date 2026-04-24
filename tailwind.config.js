@@ -11,8 +11,8 @@ module.exports = {
         extend: {
             colors: {
                 primary: {
-                    DEFAULT: '#d9ff00',
-                    hover: '#c4e600',
+                    DEFAULT: '#f9b233',
+                    hover: '#e09b1e',
                 },
                 'app-bg': '#050505',
                 'panel-bg': '#0a0a0a',
@@ -29,7 +29,7 @@ module.exports = {
                 '3xl': '2rem',
             },
             boxShadow: {
-                'glow': '0 0 20px rgba(217, 255, 0, 0.4)',
+                'glow': '0 0 20px rgba(249, 178, 51, 0.4)',
                 'glow-accent': '0 0 20px rgba(168, 85, 247, 0.4)',
                 '3xl': '0 35px 60px -15px rgba(0, 0, 0, 0.8)',
             }

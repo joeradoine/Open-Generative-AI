@@ -1,0 +1,539 @@
+'use client';
+
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { Badge, I, Kbd } from '@/src/components/studio-chrome';
+import { CHARACTERS, CHAR_BY_ID } from '@/src/data/ivamind-mock';
+
+const SHOT_PRESETS = [
+  {
+    id:'ep3-s04', ep:'EP-03', shot:'Shot 04',
+    subject:'Soukaina entrée Carrefour',
+    prompt:'A muslim woman in sage-khaki hijab and olive abaya enters a French supermarket at golden hour. Medium shot 35mm, warm amber light from setting sun through automatic doors, ambient dust particles, anime manga style ink line art 90s Madhouse, cel-shaded 2-tone hatching, linework thick brush-pen variable, grain 35mm Fujifilm Velvia, 9:16 aspect. No text. No logos.',
+    characters:['soukaina'], aspectRatio:'9:16',
+  },
+  {
+    id:'ep3-s07', ep:'EP-03', shot:'Shot 07',
+    subject:'Omar contemplatif fenêtre HLM',
+    prompt:'A 16-year-old franco-marocain teenager with curly black hair and rectangular glasses, wearing navy blue K∞ hoodie, looking through an HLM apartment window at dusk. Close-up 85mm, sodium street light painting half his face, cool blue wash, contemplative expression, anime manga seinen style Hajime no Ippo + Monster, cel-shaded limited animation feel, grain analog, 9:16. No text.',
+    characters:['omar'], aspectRatio:'9:16',
+  },
+  {
+    id:'ep3-s11', ep:'EP-03', shot:'Shot 11',
+    subject:'Radoine père thobe mosquée',
+    prompt:'A 40-year-old father with shaved head, short beard, black rectangular glasses, wearing charcoal thobe with mao collar, performing sujood in an empty mosque at fajr dawn. Wide shot 24mm, warm golden light from the mihrab, manga style 90s Madhouse, detailed architecture, cel-shaded, ink brush variable linework, 9:16. No text. Non-figurative interior details.',
+    characters:['radoine'], aspectRatio:'9:16',
+  },
+];
+
+const GRID_SIZES = [4, 9, 16];
+
+export default function GeneratePage() {
+  const [preset, setPreset] = useState(SHOT_PRESETS[0]);
+  const [prompt, setPrompt] = useState(SHOT_PRESETS[0].prompt);
+  const [gridSize, setGridSize] = useState(9);
+  const [tiles, setTiles] = useState([]);           // [{id,seed,status,url,cost,error,score}]
+  const [shortlist, setShortlist] = useState([]);   // array of tile ids (ordered)
+  const [focused, setFocused] = useState(0);
+  const [running, setRunning] = useState(false);
+  const [startedAt, setStartedAt] = useState(null);
+  const [compareMode, setCompareMode] = useState(false); // fullscreen preview of focused tile
+  const [lockToBible, setLockToBible] = useState(true);  // i2i refs injection toggle
+  const tilesRef = useRef(tiles);
+  const focusedRef = useRef(focused);
+  useEffect(() => { tilesRef.current = tiles; }, [tiles]);
+  useEffect(() => { focusedRef.current = focused; }, [focused]);
+
+  const gridCols = gridSize === 4 ? 2 : gridSize === 9 ? 3 : 4;
+
+  const runTotal = useMemo(() => {
+    const succeeded = tiles.filter(t => t.status === 'succeeded');
+    const failed = tiles.filter(t => t.status === 'failed');
+    const pending = tiles.filter(t => t.status === 'running' || t.status === 'queued');
+    const cost = succeeded.reduce((a, t) => a + (t.cost || 0), 0);
+    const elapsed = startedAt ? ((Date.now() - startedAt) / 1000).toFixed(1) : 0;
+    return { succeeded, failed, pending, cost, elapsed };
+  }, [tiles, startedAt]);
+
+  const selectPreset = (p) => { setPreset(p); setPrompt(p.prompt); setTiles([]); setShortlist([]); };
+
+  // Build refs[] payload from preset characters when lockToBible is on.
+  // Max 3 refs (Gemini MAX_REFS). We keep the primary ordering from preset.characters.
+  const buildRefs = () => {
+    if (!lockToBible) return [];
+    return preset.characters
+      .map(id => CHAR_BY_ID[id])
+      .filter(c => c && c.refUrl)
+      .slice(0, 3)
+      .map(c => ({ url: c.refUrl, role: 'face', characterId: c.id }));
+  };
+
+  const generateTile = async (tile, idx) => {
+    try {
+      const refs = buildRefs();
+      const resp = await fetch('/api/byok/generate/image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt,
+          aspectRatio: preset.aspectRatio,
+          seed: tile.seed,
+          forceProvider: 'gemini',
+          refs: refs.length ? refs : undefined,
+        }),
+      });
+      const data = await resp.json();
+      if (data.status !== 'succeeded') throw new Error(data.error || 'gen failed');
+      const url = data.assets?.[0]?.url || data.meta?.url;
+      const cost = data.costUnits || 1;
+      // Fake score until Gemini-as-judge is wired — seeded pseudo-random 7-10 range
+      const r = (tile.seed * 9301 + 49297) % 233280 / 233280;
+      const score = (7 + r * 3).toFixed(1);
+      const mode = refs.length ? 'i2i' : 't2i';
+      setTiles(prev => prev.map(t => t.id === tile.id ? { ...t, status:'succeeded', url, cost, score, mode, refCount: refs.length } : t));
+    } catch (err) {
+      setTiles(prev => prev.map(t => t.id === tile.id ? { ...t, status:'failed', error: err.message } : t));
+    }
+  };
+
+  const generateBatch = async () => {
+    if (running) return;
+    const seeds = Array.from({ length: gridSize }, () => Math.floor(Math.random() * 1_000_000));
+    const newTiles = seeds.map((seed, i) => ({ id:`t${Date.now()}_${i}`, seed, status:'running' }));
+    setTiles(newTiles); setShortlist([]); setFocused(0); setStartedAt(Date.now()); setRunning(true);
+    await Promise.allSettled(newTiles.map((t, i) => generateTile(t, i)));
+    setRunning(false);
+  };
+
+  const regenTile = async (tileId) => {
+    const tile = tiles.find(t => t.id === tileId); if (!tile) return;
+    const newSeed = Math.floor(Math.random() * 1_000_000);
+    const newTile = { ...tile, seed: newSeed, status: 'running', url: undefined, error: undefined, score: undefined };
+    setTiles(prev => prev.map(t => t.id === tileId ? newTile : t));
+    await generateTile(newTile, tiles.indexOf(tile));
+  };
+
+  const rejectTile = (tileId) => {
+    setTiles(prev => prev.filter(t => t.id !== tileId));
+    setShortlist(prev => prev.filter(id => id !== tileId));
+  };
+
+  const toggleShortlist = (tileId) => {
+    if (!tileId) return;
+    setShortlist(prev => prev.includes(tileId) ? prev.filter(id => id !== tileId) : [...prev, tileId]);
+  };
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const onKey = (e) => {
+      const t = e.target;
+      if (t.tagName === 'TEXTAREA' || t.tagName === 'INPUT' || t.isContentEditable) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      if (e.key >= '1' && e.key <= '9') {
+        const i = parseInt(e.key) - 1;
+        toggleShortlist(tilesRef.current[i]?.id);
+        setFocused(i);
+        e.preventDefault(); return;
+      }
+      const fid = tilesRef.current[focusedRef.current]?.id;
+      if (!fid && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+
+      if (e.key === 'r' || e.key === 'R') { if (fid) regenTile(fid); e.preventDefault(); }
+      else if (e.key === 'x' || e.key === 'X') { if (fid) rejectTile(fid); e.preventDefault(); }
+      else if (e.key === 's' || e.key === 'S') { if (fid) toggleShortlist(fid); e.preventDefault(); }
+      else if (e.key === ' ') { setCompareMode(m => !m); e.preventDefault(); }
+      else if (e.key === 'Escape') { setCompareMode(false); e.preventDefault(); }
+      else if (e.key === 'ArrowRight') { setFocused(f => Math.min(tilesRef.current.length - 1, f + 1)); e.preventDefault(); }
+      else if (e.key === 'ArrowLeft')  { setFocused(f => Math.max(0, f - 1)); e.preventDefault(); }
+      else if (e.key === 'ArrowDown')  { setFocused(f => Math.min(tilesRef.current.length - 1, f + gridCols)); e.preventDefault(); }
+      else if (e.key === 'ArrowUp')    { setFocused(f => Math.max(0, f - gridCols)); e.preventDefault(); }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [gridCols]);
+
+  return (
+    <div className="col" style={{ minHeight: '100%' }}>
+      {/* Sub-header : shot context + grid toggle + actions */}
+      <div className="col hairline-b" style={{ padding: '14px 24px 12px', gap: 10, background: 'var(--bg-0)' }}>
+        <div className="row gap-3">
+          <span className="section-label gold">Generation studio</span>
+          <span className="muted-2">·</span>
+          <span className="t-12 muted">Batch parallel · Gemini 2.5 Flash Image · live BYOK</span>
+        </div>
+
+        <div className="row gap-3">
+          <span className="t-display t-14 gold">{preset.ep}</span>
+          <span className="t-14" style={{ fontWeight: 500 }}>{preset.shot}</span>
+          <span className="muted-2">·</span>
+          <span className="t-14 muted">{preset.subject}</span>
+
+          <div style={{ flex: 1 }} />
+
+          <div className="tabs">
+            {GRID_SIZES.map(n => (
+              <button key={n} className={gridSize === n ? 'active' : ''} onClick={() => setGridSize(n)}>{n} variants</button>
+            ))}
+          </div>
+
+          <button
+            onClick={generateBatch}
+            disabled={running}
+            className="btn btn-primary">
+            {running ? <I.refresh size={13} /> : <I.sparkle size={13} />}
+            {running ? `Generating ${runTotal.pending.length}/${tiles.length}…` : `Generate ${gridSize}`}
+            <Kbd>⌘↵</Kbd>
+          </button>
+        </div>
+      </div>
+
+      {/* 3-column : presets (left) | grid (center) | shortlist (right) */}
+      <div className="row grow" style={{ minHeight: 0, overflow: 'hidden' }}>
+        {/* LEFT — shot presets + prompt */}
+        <div className="col hairline-r no-shrink" style={{ width: 320, background: 'var(--bg-0)', overflow: 'auto' }}>
+          <div className="col" style={{ padding: 14, gap: 12 }}>
+            <span className="section-label">Shot presets · EP-03</span>
+            <div className="col gap-1">
+              {SHOT_PRESETS.map(p => (
+                <button key={p.id}
+                  onClick={() => selectPreset(p)}
+                  className="col gap-1"
+                  style={{
+                    padding: '10px 12px', alignItems:'flex-start',
+                    borderRadius: 'var(--r-2)',
+                    border: '1px solid ' + (preset.id === p.id ? 'var(--gold)' : 'var(--border-700)'),
+                    background: preset.id === p.id ? 'var(--gold-ghost)' : 'var(--bg-2)',
+                    cursor: 'pointer', textAlign: 'left',
+                  }}>
+                  <div className="row gap-2" style={{ width: '100%' }}>
+                    <span className="t-display t-12 gold">{p.ep}</span>
+                    <span className="t-12">{p.shot}</span>
+                    <div style={{ flex: 1 }} />
+                    <CharAvatarRow ids={p.characters} />
+                  </div>
+                  <span className="t-11 muted">{p.subject}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="col hairline-t" style={{ padding: 14, gap: 8 }}>
+            <div className="row gap-2">
+              <span className="section-label">Prompt</span>
+              <div style={{ flex: 1 }} />
+              <span className="t-mono t-11 muted-2">{prompt.length} chars · est. 1u/img</span>
+            </div>
+            <textarea
+              className="input"
+              value={prompt}
+              onChange={e => setPrompt(e.target.value)}
+              rows={10}
+              style={{ height:'auto', minHeight: 160, padding: 10, fontFamily:'var(--f-sans)', fontSize: 12, lineHeight: 1.5, resize:'vertical' }}
+            />
+
+            <div className="row gap-2">
+              <span className="section-label">Character refs</span>
+              <div style={{ flex: 1 }} />
+              <label className="row gap-2" style={{ cursor: 'pointer', userSelect: 'none' }} title="i2i injection Gemini — refs bible verrouillées en inline_data multi-part">
+                <input
+                  type="checkbox"
+                  checked={lockToBible}
+                  onChange={e => setLockToBible(e.target.checked)}
+                  style={{ accentColor: 'var(--gold)', cursor: 'pointer' }}
+                />
+                <span className="t-11" style={{ color: lockToBible ? 'var(--gold)' : 'var(--muted-2)', fontWeight: lockToBible ? 600 : 400 }}>
+                  Lock to bible {lockToBible ? '(i2i)' : '(t2i)'}
+                </span>
+              </label>
+            </div>
+            <div className="row gap-2" style={{ flexWrap: 'wrap' }}>
+              {preset.characters.map((id, i) => {
+                const c = CHAR_BY_ID[id]; if (!c) return null;
+                const active = lockToBible && i < 3; // max 3 refs Gemini
+                return (
+                  <div key={id} className="row gap-2 pill" style={{
+                    borderColor: active ? 'var(--gold)' : 'var(--border-700)',
+                    background: active ? 'var(--gold-ghost)' : 'var(--bg-2)',
+                  }}>
+                    {c.refUrl ? (
+                      <img src={c.refUrl} alt={c.name} style={{
+                        width: 22, height: 22, borderRadius: '50%', objectFit: 'cover',
+                        border: active ? '1px solid var(--gold)' : '1px solid var(--border-700)',
+                      }} />
+                    ) : (
+                      <span style={{
+                        width: 22, height: 22, borderRadius:'50%',
+                        background: `hsl(${c.hue}, 32%, 28%)`, color: '#fff',
+                        display:'inline-flex', alignItems:'center', justifyContent:'center',
+                        fontSize: 9, fontWeight: 600,
+                      }}>{c.name[0]}</span>
+                    )}
+                    <span className="t-12">{c.name}</span>
+                    {active && <span className="t-11 gold t-mono">ref</span>}
+                  </div>
+                );
+              })}
+            </div>
+            <span className="t-11 muted-2">
+              {lockToBible
+                ? `→ ${Math.min(preset.characters.length, 3)} ref(s) injected as inline_data · Gemini i2i`
+                : '→ text-only prompt · Gemini t2i (character consistency low)'}
+            </span>
+          </div>
+        </div>
+
+        {/* CENTER — grid */}
+        <div className="col grow" style={{ minWidth: 0, overflow: 'auto', background: 'var(--bg-0)', padding: '16px 20px' }}>
+          {/* Grid status bar */}
+          <div className="row gap-4" style={{ padding: '4px 2px 12px' }}>
+            <span className="t-mono t-11 muted-2">{tiles.length} tiles · {runTotal.succeeded.length} ok · {runTotal.pending.length} pending · {runTotal.failed.length} failed</span>
+            <div style={{ flex: 1 }} />
+            {runTotal.cost > 0 && <span className="t-mono t-11 gold">{runTotal.cost} credits spent</span>}
+            {runTotal.elapsed > 0 && <span className="t-mono t-11 muted-2">{runTotal.elapsed}s elapsed</span>}
+          </div>
+
+          {tiles.length === 0 ? (
+            <div className="ph-stripe gold" style={{ minHeight: 480, borderRadius:'var(--r-3)', flexDirection:'column', gap: 10, fontFamily:'var(--f-sans)', fontSize: 13 }}>
+              <I.sparkle size={32} />
+              <div className="col gap-1" style={{ alignItems:'center' }}>
+                <span className="t-14 gold">Ready to generate {gridSize} variants</span>
+                <span className="t-11 muted-2">Adjust prompt left · press <Kbd>⌘↵</Kbd> or click Generate</span>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display:'grid', gridTemplateColumns:`repeat(${gridCols}, 1fr)`, gap: 12 }}>
+              {tiles.map((t, i) => (
+                <Tile
+                  key={t.id} tile={t} index={i}
+                  focused={focused === i}
+                  shortlistRank={shortlist.indexOf(t.id)}
+                  onFocus={() => setFocused(i)}
+                  onShortlist={() => toggleShortlist(t.id)}
+                  onRegen={() => regenTile(t.id)}
+                  onReject={() => rejectTile(t.id)}
+                  onZoom={() => { setFocused(i); setCompareMode(true); }}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Shortcuts hint */}
+          {tiles.length > 0 && (
+            <div className="row gap-3 t-11 muted-2" style={{ marginTop: 14, paddingTop: 10, borderTop:'1px solid var(--border-700)' }}>
+              <span><Kbd>1-9</Kbd> shortlist</span>
+              <span><Kbd>S</Kbd> toggle focused</span>
+              <span><Kbd>R</Kbd> regen focused</span>
+              <span><Kbd>X</Kbd> reject focused</span>
+              <span><Kbd>Space</Kbd> preview</span>
+              <span><Kbd>↑↓←→</Kbd> nav</span>
+            </div>
+          )}
+        </div>
+
+        {/* RIGHT — shortlist */}
+        <aside className="col hairline-l no-shrink" style={{ width: 280, background: 'var(--bg-1)', overflow: 'auto' }}>
+          <div className="col hairline-b" style={{ padding: 14, gap: 6 }}>
+            <div className="row gap-2">
+              <span className="section-label">Shortlist</span>
+              <div style={{ flex: 1 }} />
+              <span className="t-mono t-11 muted-2">{shortlist.length}</span>
+            </div>
+            <span className="t-11 muted-2">Press <Kbd>1-9</Kbd> to pick</span>
+          </div>
+
+          <div className="col" style={{ padding: 10, gap: 8 }}>
+            {shortlist.length === 0 && (
+              <div className="t-12 muted-2" style={{ padding: 20, textAlign:'center' }}>
+                Aucun shortlist. Tape <Kbd>1</Kbd>…<Kbd>9</Kbd> pour valider une variante.
+              </div>
+            )}
+            {shortlist.map((tid, i) => {
+              const tile = tiles.find(t => t.id === tid); if (!tile) return null;
+              return (
+                <div key={tid} className="row gap-2 card" style={{ padding: 6 }}>
+                  <div style={{
+                    width: 56, height: 100, background: 'var(--bg-3)',
+                    borderRadius: 'var(--r-1)',
+                    backgroundImage: tile.url ? `url(${tile.url})` : 'none',
+                    backgroundSize: 'cover', backgroundPosition: 'center',
+                  }} />
+                  <div className="col grow" style={{ gap: 2, minWidth: 0 }}>
+                    <span className="t-12 truncate">#{i + 1} · seed {tile.seed}</span>
+                    <span className="t-mono t-11 gold">score {tile.score || '—'}</span>
+                    <span className="t-11 muted-2">{preset.shot}</span>
+                  </div>
+                  <button className="iconbtn" onClick={() => toggleShortlist(tid)} title="Remove from shortlist">
+                    <I.x size={12} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          {shortlist.length > 0 && (
+            <div className="col hairline-t" style={{ padding: 10, gap: 6 }}>
+              <button className="btn btn-secondary btn-sm" style={{ justifyContent:'center' }}>
+                <I.image size={12} />Upscale all
+              </button>
+              <button className="btn btn-secondary btn-sm" style={{ justifyContent:'center' }}>
+                <I.video size={12} />Send to Kling (i2v)
+              </button>
+              <button className="btn btn-primary btn-sm" style={{ justifyContent:'center' }}>
+                <I.export size={12} />Add to EP
+              </button>
+            </div>
+          )}
+
+          <div className="col hairline-t" style={{ padding: 10, gap: 4 }}>
+            <span className="section-label">Batch summary</span>
+            <div className="row gap-2 t-11 muted"><span className="dot dot-green" />succeeded {runTotal.succeeded.length}</div>
+            <div className="row gap-2 t-11 muted"><span className="dot dot-gold" />pending {runTotal.pending.length}</div>
+            <div className="row gap-2 t-11 muted"><span className="dot dot-red" />failed {runTotal.failed.length}</div>
+            <div className="row gap-2 t-11 muted-2" style={{ marginTop: 4 }}>
+              <span>cost</span>
+              <span className="gold t-mono">{runTotal.cost} u</span>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      {/* Compare mode overlay (Space to toggle) */}
+      {compareMode && tiles[focused] && (
+        <div onClick={() => setCompareMode(false)} style={{
+          position:'fixed', inset: 0, zIndex: 90,
+          background:'rgba(10,10,18,.85)', backdropFilter:'blur(12px)',
+          display:'flex', alignItems:'center', justifyContent:'center',
+          padding: 40,
+        }}>
+          <div className="col gap-3" style={{ alignItems:'center' }}>
+            <img src={tiles[focused].url} alt="" style={{ maxHeight:'84vh', maxWidth:'90vw', borderRadius:'var(--r-3)', border:'1px solid var(--border-400)' }} />
+            <div className="row gap-3 t-mono t-12 muted">
+              <span>{preset.shot}</span>
+              <span>·</span>
+              <span>seed {tiles[focused].seed}</span>
+              <span>·</span>
+              <span className="gold">score {tiles[focused].score}</span>
+              <span>·</span>
+              <span>{focused + 1} / {tiles.length}</span>
+              <span>·</span>
+              <span className="muted-2"><Kbd>Esc</Kbd> close</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Tile ───
+function Tile({ tile, index, focused, shortlistRank, onFocus, onShortlist, onRegen, onReject, onZoom }) {
+  const isShortlisted = shortlistRank >= 0;
+  return (
+    <div
+      onClick={onFocus}
+      style={{
+        position:'relative',
+        aspectRatio: '9/16',
+        background: 'var(--bg-2)',
+        border: '1px solid ' + (focused ? 'var(--gold)' : isShortlisted ? 'rgba(249,178,51,.45)' : 'var(--border-700)'),
+        borderRadius: 'var(--r-3)',
+        overflow: 'hidden',
+        cursor: 'pointer',
+        boxShadow: focused ? 'var(--focus)' : 'none',
+        transition: 'border-color .12s, box-shadow .12s',
+      }}>
+      {/* Image or placeholder */}
+      {tile.status === 'succeeded' && tile.url ? (
+        <img src={tile.url} alt="" loading="lazy" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+      ) : tile.status === 'running' ? (
+        <div className="skel" style={{ width:'100%', height:'100%' }} />
+      ) : tile.status === 'failed' ? (
+        <div className="ph-stripe" style={{ width:'100%', height:'100%', flexDirection:'column', gap: 6, color:'var(--red)', borderColor:'rgba(229,72,77,.4)' }}>
+          <I.x size={18} />
+          <span className="t-mono t-11">{tile.error?.slice(0, 40) || 'failed'}</span>
+        </div>
+      ) : (
+        <div className="ph-stripe gold" style={{ width:'100%', height:'100%' }}>
+          <span className="t-mono t-11">queued</span>
+        </div>
+      )}
+
+      {/* Top-left: tile index + mode badge */}
+      <div style={{ position:'absolute', top: 6, left: 6, display:'flex', gap: 4 }}>
+        <div style={{ padding:'2px 6px', background:'rgba(10,10,18,.8)', borderRadius:'var(--r-1)' }}>
+          <span className="t-mono t-11 muted">{index + 1}</span>
+        </div>
+        {tile.mode && (
+          <div style={{
+            padding:'2px 6px',
+            background: tile.mode === 'i2i' ? 'rgba(249,178,51,.22)' : 'rgba(10,10,18,.8)',
+            borderRadius:'var(--r-1)',
+            border: tile.mode === 'i2i' ? '1px solid var(--gold)' : 'none',
+          }}>
+            <span className="t-mono t-11" style={{ color: tile.mode === 'i2i' ? 'var(--gold)' : 'var(--muted-2)' }}>
+              {tile.mode}{tile.refCount ? ` · ${tile.refCount}` : ''}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Top-right: shortlist rank */}
+      {isShortlisted && (
+        <div style={{ position:'absolute', top: 6, right: 6, width: 20, height: 20, background:'var(--gold)', color:'#1a1200', borderRadius: '50%',
+          display:'flex', alignItems:'center', justifyContent:'center', fontWeight: 700, fontSize: 11, fontFamily:'var(--f-mono)' }}>
+          {shortlistRank + 1}
+        </div>
+      )}
+
+      {/* Bottom: scores / status */}
+      <div style={{ position:'absolute', left: 0, right: 0, bottom: 0, padding: '6px 8px 6px',
+        background:'linear-gradient(to top, rgba(10,10,18,.95), rgba(10,10,18,0))',
+        display:'flex', alignItems:'flex-end', justifyContent:'space-between', gap: 6 }}>
+        <div className="col" style={{ gap: 1, lineHeight: 1 }}>
+          {tile.score && <span className="t-mono t-11 gold">{tile.score}</span>}
+          <span className="t-mono t-11 muted-2">s{tile.seed}</span>
+        </div>
+        {tile.cost && <span className="t-mono t-11 muted">{tile.cost}u</span>}
+      </div>
+
+      {/* Hover actions */}
+      <div style={{
+        position:'absolute', top: 32, right: 6,
+        display:'flex', flexDirection:'column', gap: 4,
+        opacity: focused ? 1 : 0, transition:'opacity .12s',
+      }}>
+        <button className="iconbtn" onClick={(e) => { e.stopPropagation(); onShortlist(); }} title="Shortlist (S)">
+          <I.dot size={12} />
+        </button>
+        <button className="iconbtn" onClick={(e) => { e.stopPropagation(); onRegen(); }} title="Regen (R)">
+          <I.refresh size={12} />
+        </button>
+        <button className="iconbtn" onClick={(e) => { e.stopPropagation(); onZoom(); }} title="Zoom (Space)">
+          <I.image size={12} />
+        </button>
+        <button className="iconbtn" onClick={(e) => { e.stopPropagation(); onReject(); }} title="Reject (X)">
+          <I.x size={12} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CharAvatarRow({ ids }) {
+  return (
+    <div className="row" style={{ gap: 0 }}>
+      {ids.slice(0, 3).map((id, i) => {
+        const c = CHAR_BY_ID[id]; if (!c) return null;
+        return (
+          <span key={id} title={c.name} style={{
+            width: 18, height: 18, borderRadius:'50%',
+            background: `hsl(${c.hue}, 32%, 28%)`, color: '#fff',
+            border: '1px solid var(--bg-0)', marginLeft: i === 0 ? 0 : -4,
+            display:'inline-flex', alignItems:'center', justifyContent:'center',
+            fontSize: 9, fontWeight: 600,
+          }}>{c.name[0]}</span>
+        );
+      })}
+    </div>
+  );
+}
