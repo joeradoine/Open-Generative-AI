@@ -57,13 +57,13 @@ export default function GeneratePage() {
   const selectPreset = (p) => { setPreset(p); setPrompt(p.prompt); setTiles([]); setShortlist([]); };
 
   // Build refs[] payload from preset characters when lockToBible is on.
-  // Max 3 refs (Gemini MAX_REFS). We keep the primary ordering from preset.characters.
+  // Max 4 refs (Gemini MAX_REFS — best practice 2026). Primary ordering from preset.characters.
   const buildRefs = () => {
     if (!lockToBible) return [];
     return preset.characters
       .map(id => CHAR_BY_ID[id])
       .filter(c => c && c.refUrl)
-      .slice(0, 3)
+      .slice(0, 4)
       .map(c => ({ url: c.refUrl, role: 'face', characterId: c.id }));
   };
 
@@ -249,7 +249,7 @@ export default function GeneratePage() {
             <div className="row gap-2" style={{ flexWrap: 'wrap' }}>
               {preset.characters.map((id, i) => {
                 const c = CHAR_BY_ID[id]; if (!c) return null;
-                const active = lockToBible && i < 3; // max 3 refs Gemini
+                const active = lockToBible && i < 4; // max 4 refs Gemini (2026 best practice)
                 return (
                   <div key={id} className="row gap-2 pill" style={{
                     borderColor: active ? 'var(--gold)' : 'var(--border-700)',
@@ -276,7 +276,7 @@ export default function GeneratePage() {
             </div>
             <span className="t-11 muted-2">
               {lockToBible
-                ? `→ ${Math.min(preset.characters.length, 3)} ref(s) injected as inline_data · Gemini i2i`
+                ? `→ ${Math.min(preset.characters.length, 4)} ref(s) injected as inline_data · Gemini i2i`
                 : '→ text-only prompt · Gemini t2i (character consistency low)'}
             </span>
           </div>

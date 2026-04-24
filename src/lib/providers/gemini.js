@@ -6,7 +6,7 @@ import { newJobId } from './types.js';
 const OUTPUT_DIR = path.join(process.cwd(), 'public', 'byok-output', 'gemini');
 const OUTPUT_URL_PREFIX = '/byok-output/gemini';
 const MODEL_ID = 'gemini-2.5-flash-image';
-const MAX_REFS = 3;
+const MAX_REFS = 4; // 2026 best practice Nano Banana — 4 refs persos max pour cohérence faciale optimale
 
 /**
  * Fetch a URL (http(s), data:, or local /public/...) and return {base64, mimeType}.
