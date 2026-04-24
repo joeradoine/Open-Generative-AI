@@ -1,12 +1,26 @@
 
-import { muapi } from '../lib/muapi.js';
+// IVAMIND Sandbox — Muapi arraché 2026-04-24, route vers /api/byok/generate/image direct
+// (Gemini 2.5 Flash Image par défaut, on héritera des autres providers quand Provider Layer
+//  router étendra à Nano Banana Pro / Midjourney / Flux via BYOK).
 import { CameraControls } from './CameraControls.js';
 import { buildNanoBananaPrompt, CAMERA_MAP, LENS_MAP, FOCAL_PERSPECTIVE, APERTURE_EFFECT } from '../lib/promptUtils.js';
-import { AuthModal } from './AuthModal.js';
 
 export function CinemaStudio() {
     const container = document.createElement('div');
     container.className = 'w-full h-full flex flex-col items-center justify-center bg-black relative overflow-hidden';
+
+    // ═══ IVAMIND Sandbox banner ═══
+    const sandbox = document.createElement('div');
+    sandbox.className = 'absolute top-0 left-0 right-0 z-50 px-4 py-2 flex items-center justify-between gap-4 text-xs';
+    sandbox.style.cssText = 'background: linear-gradient(90deg, rgba(249,178,51,0.18), rgba(249,178,51,0.06)); border-bottom: 1px solid rgba(249,178,51,0.45); color: #f9b233; font-family: ui-sans-serif, -apple-system, sans-serif;';
+    sandbox.innerHTML = `
+        <span style="display:inline-flex;gap:8px;align-items:center;">
+            <span style="font-weight:700;letter-spacing:0.08em;">⚡ SANDBOX</span>
+            <span style="opacity:0.85;">Cinema Studio BYOK — Muapi bypass, route vers Gemini. À migrer dans /ivamind/* après validation features.</span>
+        </span>
+        <a href="/ivamind/dashboard" style="color:#f9b233;text-decoration:underline;opacity:0.8;">← Retour IVAMIND</a>
+    `;
+    container.appendChild(sandbox);
 
     // --- State ---
     const currentSettings = {
@@ -537,16 +551,10 @@ export function CinemaStudio() {
         const basePrompt = textarea.value.trim();
         if (!basePrompt) return;
 
-        const apiKey = localStorage.getItem('muapi_key');
-        if (!apiKey) {
-            AuthModal(() => generateBtn.click());
-            return;
-        }
-
         generateBtn.disabled = true;
         generateBtn.innerHTML = "SHOOTING...";
 
-        // Compile Prompt
+        // Compile Prompt avec les contrôles cinéma Lens/Focal/Aperture
         const finalPrompt = buildNanoBananaPrompt(
             basePrompt,
             currentSettings.camera,
@@ -556,29 +564,39 @@ export function CinemaStudio() {
         );
 
         try {
-            const res = await muapi.generateImage({
-                model: 'nano-banana-pro',
-                prompt: finalPrompt,
-                aspect_ratio: currentSettings.aspect_ratio,
-                resolution: (resBtn.dataset.value || '1k').toLowerCase(),
-                negative_prompt: "blurry, low quality, distortion, bad composition"
+            // ═══ BYOK direct (Muapi arraché 2026-04-24) ═══
+            const resp = await fetch('/api/byok/generate/image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    prompt: finalPrompt,
+                    aspectRatio: currentSettings.aspect_ratio,
+                    negativePrompt: 'blurry, low quality, distortion, bad composition',
+                    forceProvider: 'gemini',
+                }),
             });
+            const res = await resp.json();
+            if (!resp.ok || res.status !== 'succeeded') {
+                throw new Error(res.error || 'gen failed');
+            }
+            const url = res.assets?.[0]?.url || res.meta?.url;
 
-            if (res && res.url) {
-                // Save to history
+            if (url) {
                 addToHistory({
-                    url: res.url,
+                    url,
                     timestamp: Date.now(),
                     settings: {
                         prompt: basePrompt,
                         ...currentSettings,
-                        resolution: resBtn.dataset.value
+                        resolution: resBtn.dataset.value,
+                        provider: res.providerId,
+                        costUnits: res.costUnits,
                     }
                 });
 
-                showCanvas(res.url);
+                showCanvas(url);
             } else {
-                throw new Error('No Data');
+                throw new Error('No asset URL');
             }
 
         } catch (e) {

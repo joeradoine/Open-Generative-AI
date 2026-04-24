@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { generateImage, uploadFile } from "../muapi.js";
+// IVAMIND Sandbox 2026-04-24 — Muapi arraché, BYOK direct Gemini via /api/byok/generate/image
+// uploadFile conservé si usage par autres studios mais non-utilisé ici.
+import { uploadFile } from "../muapi.js";
 
 // ─── Constants (inlined from promptUtils) ───────────────────────────────────
 
@@ -588,14 +590,23 @@ export default function CinemaStudio({
     );
 
     try {
-      const res = await generateImage(apiKey, {
-        model: uploadedImage ? "nano-banana-pro-edit" : "nano-banana-pro",
-        prompt: finalPrompt,
-        aspect_ratio: settings.aspect_ratio,
-        resolution: resolution.toLowerCase(),
-        negative_prompt: "blurry, low quality, distortion, bad composition",
-        images_list: uploadedImage ? [uploadedImage] : [],
+      // ═══ IVAMIND BYOK 2026-04-24 — Muapi arraché, route directe Gemini via Provider Layer ═══
+      const resp = await fetch('/api/byok/generate/image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: finalPrompt,
+          aspectRatio: settings.aspect_ratio,
+          negativePrompt: 'blurry, low quality, distortion, bad composition',
+          forceProvider: 'gemini',
+          refs: uploadedImage ? [{ url: uploadedImage, role: 'ref' }] : undefined,
+        }),
       });
+      const _data = await resp.json();
+      if (!resp.ok || _data.status !== 'succeeded') {
+        throw new Error(_data.error || 'gen failed');
+      }
+      const res = { url: _data.assets?.[0]?.url || _data.meta?.url, providerId: _data.providerId, costUnits: _data.costUnits };
 
       if (res && res.url) {
         const entry = {
@@ -709,7 +720,23 @@ export default function CinemaStudio({
   // ── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="w-full h-full flex flex-col items-center justify-center bg-black relative overflow-hidden">
-      
+      {/* ── IVAMIND SANDBOX BANNER — Muapi bypass, BYOK Gemini direct ── */}
+      <div
+        className="w-full flex items-center justify-between gap-4 px-4 py-2 text-xs"
+        style={{
+          background: 'linear-gradient(90deg, rgba(249,178,51,0.18), rgba(249,178,51,0.06))',
+          borderBottom: '1px solid rgba(249,178,51,0.45)',
+          color: '#f9b233',
+          flexShrink: 0,
+        }}
+      >
+        <span className="flex items-center gap-2">
+          <span className="font-bold tracking-widest">⚡ SANDBOX</span>
+          <span className="opacity-85">Cinema Studio BYOK · Muapi arraché, route Gemini direct. À migrer dans /ivamind/* après validation.</span>
+        </span>
+        <a href="/ivamind/dashboard" className="underline opacity-80 hover:opacity-100">← Retour IVAMIND</a>
+      </div>
+
       {/* ── CENTRAL GALLERY AREA ── */}
       <div className="flex-1 w-full max-w-7xl mx-auto overflow-y-auto custom-scrollbar pb-40 lg:pb-32 px-2">
         {history.length > 0 ? (
