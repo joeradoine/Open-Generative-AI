@@ -5,8 +5,22 @@ import { newJobId } from './types.js';
 
 const OUTPUT_DIR = path.join(process.cwd(), 'public', 'byok-output', 'gemini');
 const OUTPUT_URL_PREFIX = '/byok-output/gemini';
-const MODEL_ID = 'gemini-2.5-flash-image';
-const MAX_REFS = 4; // 2026 best practice Nano Banana — 4 refs persos max pour cohérence faciale optimale
+
+// Models disponibles côté Gemini Image :
+// - gemini-2.5-flash-image : cap 4 refs (existant, stable)
+// - gemini-3.1-flash-image (Nano Banana 2) : cap 14 refs, 1K/2K/4K resolution, Google Search enhancement
+// Le modelHint body override via params.modelHint, défaut = 2.5 pour rétrocompat.
+const MODEL_ID_DEFAULT = 'gemini-2.5-flash-image';
+const MODEL_ID_NANO_BANANA_2 = 'gemini-3.1-flash-image';
+const MAX_REFS_25 = 4;
+const MAX_REFS_NANO_BANANA_2 = 14;
+
+function resolveModelConfig(modelHint) {
+  if (modelHint === 'nano-banana-2' || modelHint === 'gemini-3.1-flash-image' || modelHint === 'nano-banana-pro') {
+    return { modelId: MODEL_ID_NANO_BANANA_2, maxRefs: MAX_REFS_NANO_BANANA_2 };
+  }
+  return { modelId: MODEL_ID_DEFAULT, maxRefs: MAX_REFS_25 };
+}
 
 /**
  * Fetch a URL (http(s), data:, or local /public/...) and return {base64, mimeType}.
@@ -73,11 +87,14 @@ export class GeminiAdapter {
     const jobId = newJobId('gemini');
     const refs = Array.isArray(params.refs) ? params.refs : [];
 
-    if (refs.length > MAX_REFS) {
-      throw new Error(`GeminiAdapter: max ${MAX_REFS} refs supported (got ${refs.length}). Use muapi for >3.`);
+    // Resolve model — default 2.5 (4 refs cap), nano-banana-2 hint unlock 14 refs cap
+    const { modelId, maxRefs } = resolveModelConfig(params.modelHint);
+
+    if (refs.length > maxRefs) {
+      throw new Error(`GeminiAdapter ${modelId}: max ${maxRefs} refs supported (got ${refs.length}). Switch to modelHint='nano-banana-2' pour 14 refs.`);
     }
 
-    const model = this._client.getGenerativeModel({ model: MODEL_ID });
+    const model = this._client.getGenerativeModel({ model: modelId });
 
     // Build multimodal parts.
     const parts = [];
@@ -138,7 +155,7 @@ export class GeminiAdapter {
       providerId: this.providerId,
       costUnits: 1,
       assets: [{ url: publicUrl, kind: 'image' }],
-      meta: { model: MODEL_ID, refCount: refs.length, mimeType },
+      meta: { model: modelId, maxRefs, refCount: refs.length, mimeType },
     };
   }
 

@@ -51,6 +51,7 @@ export default function GeneratePage() {
   const fileInputRef = useRef(null);
   const [cameraPreset, setCameraPreset] = useState(null);    // preset mouvement caméra (Dolly In, etc.)
   const [styleBundle, setStyleBundle] = useState(null);      // bundle style (IVAMIND manga, Netflix, etc.)
+  const [useNanoBanana2, setUseNanoBanana2] = useState(false); // Gemini 3.1 Flash Image — 14 refs au lieu de 4
   const tilesRef = useRef(tiles);
   const focusedRef = useRef(focused);
   useEffect(() => { tilesRef.current = tiles; }, [tiles]);
@@ -70,27 +71,29 @@ export default function GeneratePage() {
   const selectPreset = (p) => { setPreset(p); setPrompt(p.prompt); setTiles([]); setShortlist([]); };
 
   // Build refs[] via SMART PICKER — exploite la banque 20 refs/persona selon le contexte shot.
-  // Cap total 4 (MAX_REFS Gemini 2026 best-practice).
-  // Contexte analysé : prompt + camera preset + style bundle → pick 4 refs les + pertinentes.
+  // Cap : Gemini 2.5 = 4 refs · Nano Banana 2 (Gemini 3.1) = 14 refs.
   const buildRefs = () => {
+    const cap = useNanoBanana2 ? 14 : 4;
     const refs = [];
-    // custom uploads prioritaires (user override)
     customRefs.forEach(r => refs.push({ url: r.dataUrl, role: 'custom', label: r.name, reason: 'uploadé par l\'utilisateur' }));
 
-    if (lockToBible && refs.length < 4) {
+    if (lockToBible && refs.length < cap) {
       const context = {
         prompt,
         camera: CAMERA_PRESETS.find(p => p.id === cameraPreset),
         style: STYLE_BUNDLES.find(b => b.id === styleBundle),
       };
-      const smart = pickSmartRefsMulti(preset.characters.filter(id => CHAR_BY_ID[id]?.refUrl), context);
-      // Remplit les slots restants
+      const smart = pickSmartRefsMulti(
+        preset.characters.filter(id => CHAR_BY_ID[id]?.refUrl),
+        context,
+        cap - refs.length,
+      );
       for (const r of smart) {
-        if (refs.length >= 4) break;
+        if (refs.length >= cap) break;
         refs.push(r);
       }
     }
-    return refs.slice(0, 4);
+    return refs.slice(0, cap);
   };
 
   const handleUpload = async (e) => {
@@ -135,6 +138,7 @@ export default function GeneratePage() {
           aspectRatio: preset.aspectRatio,
           seed: tile.seed,
           forceProvider: 'gemini',
+          modelHint: useNanoBanana2 ? 'nano-banana-2' : undefined,
           refs: refs.length ? refs : undefined,
         }),
       });
@@ -392,6 +396,23 @@ export default function GeneratePage() {
                 </div>
               </details>
             )}
+
+            {/* Toggle Nano Banana 2 (Gemini 3.1) — 14 refs au lieu de 4 */}
+            <div className="row gap-2" style={{ marginTop: 4 }}>
+              <label className="row gap-2" style={{ cursor: 'pointer', userSelect: 'none', width: '100%' }} title="Active Gemini 3.1 Flash Image (Nano Banana 2) — cap 14 refs au lieu de 4. Cohérence bible 3.5× supérieure.">
+                <input
+                  type="checkbox"
+                  checked={useNanoBanana2}
+                  onChange={e => setUseNanoBanana2(e.target.checked)}
+                  style={{ accentColor: 'var(--gold)', cursor: 'pointer' }}
+                />
+                <span className="t-12" style={{ color: useNanoBanana2 ? 'var(--gold)' : 'var(--muted)', fontWeight: useNanoBanana2 ? 600 : 400 }}>
+                  Nano Banana 2 {useNanoBanana2 ? '(14 refs)' : '(active pour 14 refs)'}
+                </span>
+                <div style={{ flex: 1 }} />
+                <span className="t-11 muted-2 t-mono">{useNanoBanana2 ? '3.1' : '2.5'}</span>
+              </label>
+            </div>
 
             <div className="row gap-2">
               <span className="section-label">Character refs</span>

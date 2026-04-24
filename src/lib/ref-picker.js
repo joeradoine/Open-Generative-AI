@@ -189,24 +189,85 @@ export function pickSmartRefs(characterId, context = {}) {
 }
 
 /**
- * Même logique mais pour plusieurs persos — balance intelligemment le budget 4 refs total.
- * 1 perso → 4 smart refs · 2 persos → 2 chacun (front + 1 smart) · 3-4 → 1 chacun (front).
+ * Pick pour plusieurs persos — balance intelligemment le budget total.
+ * @param {string[]} characterIds
+ * @param {Object} context
+ * @param {number} [maxRefs=4] — cap total (Gemini 2.5 = 4, Nano Banana 2 = 14).
+ *
+ * Répartition :
+ *  maxRefs 4  : 1 perso → 4 / 2 persos → 2+2 / 3-4 → 1 chacun
+ *  maxRefs 14 : 1 perso → 7 (L1 + expressions + angles + light best) / 2 persos → 4+4 / 3 → 3+3+3 / 4+ → 3 chacun
  */
-export function pickSmartRefsMulti(characterIds, context) {
+export function pickSmartRefsMulti(characterIds, context, maxRefs = 4) {
   if (!characterIds.length) return [];
-  if (characterIds.length === 1) return pickSmartRefs(characterIds[0], context);
-
-  const refs = [];
-  if (characterIds.length === 2) {
-    for (const id of characterIds) {
-      const smart = pickSmartRefs(id, context);
-      refs.push(smart[0], smart[1]); // front + best-match
+  if (characterIds.length === 1) {
+    const full = pickSmartRefs(characterIds[0], context);
+    // Avec Nano Banana 2 (14 refs), on enrichit avec L2-L5 supplémentaires + front second
+    if (maxRefs > 4) {
+      const extras = buildExtendedRefs(characterIds[0], context, maxRefs - full.length);
+      return [...full, ...extras].slice(0, maxRefs);
     }
-  } else {
-    for (const id of characterIds.slice(0, 4)) {
-      const smart = pickSmartRefs(id, context);
-      refs.push(smart[0]); // front only
+    return full.slice(0, maxRefs);
+  }
+
+  const perChar = Math.max(1, Math.floor(maxRefs / characterIds.length));
+  const refs = [];
+  for (const id of characterIds) {
+    const smart = pickSmartRefs(id, context);
+    if (maxRefs <= 4) {
+      // mode Gemini 2.5 — mini 1-2 refs / perso
+      for (let i = 0; i < perChar && refs.length < maxRefs; i++) {
+        if (smart[i]) refs.push(smart[i]);
+      }
+    } else {
+      // mode Nano Banana 2 — jusqu'à 4-7 refs / perso
+      for (let i = 0; i < Math.min(perChar, smart.length) && refs.length < maxRefs; i++) {
+        refs.push(smart[i]);
+      }
+      // extras L2/L3/L5 si budget restant
+      if (refs.length < maxRefs) {
+        const extras = buildExtendedRefs(id, context, perChar - smart.length);
+        for (const e of extras) {
+          if (refs.length >= maxRefs) break;
+          refs.push(e);
+        }
+      }
     }
   }
-  return refs.slice(0, 4);
+  return refs.slice(0, maxRefs);
+}
+
+/**
+ * Construit des refs supplémentaires au-delà des 4 L1+smart pour exploiter Nano Banana 2 (14 refs).
+ * Ajoute expressions + poses + angles + lighting additionnels scorés secondaires.
+ */
+function buildExtendedRefs(characterId, context, count) {
+  if (count <= 0) return [];
+  const { prompt = '', camera, style } = context;
+  const fullCtx = [
+    prompt, camera?.promptHint, camera?.label, camera?.useCase,
+    style?.extraHint, style?.label,
+  ].filter(Boolean).join(' ');
+
+  const allLevels = [
+    ...Object.entries(REF_BANK.expressions).map(([k, v]) => ({ level: 'L2-expr', key: k, entry: v, score: scoreRef(v, fullCtx) })),
+    ...Object.entries(REF_BANK.poses).map(([k, v]) => ({ level: 'L3-pose', key: k, entry: v, score: scoreRef(v, fullCtx) })),
+    ...Object.entries(REF_BANK.angles).map(([k, v]) => ({ level: 'L4-angle', key: k, entry: v, score: scoreRef(v, fullCtx) })),
+    ...Object.entries(REF_BANK.lighting).map(([k, v]) => ({ level: 'L5-light', key: k, entry: v, score: scoreRef(v, fullCtx) })),
+  ];
+  allLevels.sort((a, b) => b.score - a.score);
+
+  const extras = [];
+  const seen = new Set();
+  for (const item of allLevels) {
+    if (extras.length >= count) break;
+    const url = item.entry.path(characterId);
+    if (seen.has(url)) continue;
+    seen.add(url);
+    extras.push({
+      url, angle: item.key, source: item.level, characterId, role: 'face',
+      reason: item.score > 0 ? `secondary match "${item.key}"` : `fill ${item.level}`,
+    });
+  }
+  return extras;
 }
