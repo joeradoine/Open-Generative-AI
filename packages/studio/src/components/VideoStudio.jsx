@@ -1,7 +1,33 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { generateVideo, generateI2V, uploadFile } from "../muapi.js";
+// IVAMIND 2026-04-24 — Muapi arraché pour les generations. uploadFile conservé pour upload assets.
+// generateVideo / generateI2V bypassés → fetch direct vers /api/byok/generate/video (Kling).
+import { uploadFile } from "../muapi.js";
+
+// Helpers BYOK pour remplacer generateVideo/generateI2V Muapi.
+async function byokGenerateVideo(params) {
+  const resp = await fetch('/api/byok/generate/video', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      prompt: params.prompt,
+      startFrame: params.image_url,
+      videoRef: params.video_url,
+      aspectRatio: params.aspect_ratio,
+      duration: params.duration,
+      resolution: params.resolution,
+      quality: params.quality,
+      mode: params.mode,
+      forceProvider: 'kling',
+      modelHint: params.model,
+    }),
+  });
+  const data = await resp.json();
+  if (!resp.ok || data.status !== 'succeeded') throw new Error(data.error || 'gen failed');
+  return { url: data.assets?.[0]?.url || data.meta?.url, id: data.jobId, providerId: data.providerId };
+}
+const generateVideo = (_apiKey, params) => byokGenerateVideo(params);
+const generateI2V = (_apiKey, params) => byokGenerateVideo(params);
 import {
   t2vModels,
   i2vModels,
@@ -996,6 +1022,19 @@ export default function VideoStudio({
       ref={containerRef}
       className="w-full h-full flex flex-col items-center justify-center bg-app-bg relative overflow-hidden"
     >
+      {/* ── IVAMIND SANDBOX — Muapi arraché, BYOK Kling direct ── */}
+      <div className="w-full flex items-center justify-between gap-4 px-4 py-2 text-xs" style={{
+        background: 'linear-gradient(90deg, rgba(249,178,51,0.18), rgba(249,178,51,0.06))',
+        borderBottom: '1px solid rgba(249,178,51,0.45)',
+        color: '#f9b233', flexShrink: 0,
+      }}>
+        <span className="flex items-center gap-2">
+          <span className="font-bold tracking-widest">⚡ SANDBOX</span>
+          <span className="opacity-85">Video Studio BYOK · Muapi arraché, route Kling direct. Attention : Kling balance trial épuisée — charge avant test.</span>
+        </span>
+        <a href="/ivamind/dashboard" className="underline opacity-80 hover:opacity-100">← Retour IVAMIND</a>
+      </div>
+
       {/* ── CENTRAL GALLERY AREA ── */}
       <div className="flex-1 w-full max-w-7xl mx-auto overflow-y-auto custom-scrollbar pb-40 lg:pb-32 px-2">
         {history.length > 0 ? (

@@ -1,7 +1,33 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { generateImage, generateI2I, uploadFile } from "../muapi.js";
+// IVAMIND 2026-04-24 — Muapi arraché pour les generations. uploadFile conservé.
+// generateImage / generateI2I bypassés → fetch direct /api/byok/generate/image (Gemini 2.5 Flash Image).
+import { uploadFile } from "../muapi.js";
+
+async function byokGenerateImage(params) {
+  const refs = [];
+  if (Array.isArray(params.images_list) && params.images_list.length) {
+    params.images_list.forEach(url => refs.push({ url, role: 'ref' }));
+  } else if (params.image_url) {
+    refs.push({ url: params.image_url, role: 'ref' });
+  }
+  const resp = await fetch('/api/byok/generate/image', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      prompt: params.prompt,
+      aspectRatio: params.aspect_ratio,
+      refs: refs.length ? refs.slice(0, 14) : undefined, // Nano Banana 2 Edit supporte 14 refs; Gemini 2.5 cap à 4 côté adapter
+      forceProvider: 'gemini',
+      modelHint: params.model,
+    }),
+  });
+  const data = await resp.json();
+  if (!resp.ok || data.status !== 'succeeded') throw new Error(data.error || 'gen failed');
+  return { url: data.assets?.[0]?.url || data.meta?.url, id: data.jobId, providerId: data.providerId };
+}
+const generateImage = (_apiKey, params) => byokGenerateImage(params);
+const generateI2I = (_apiKey, params) => byokGenerateImage(params);
 import {
   t2iModels,
   i2iModels,
@@ -1092,7 +1118,19 @@ export default function ImageStudio({
   // ── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="w-full h-full flex flex-col items-center justify-center bg-app-bg relative p-4 md:p-6 overflow-hidden">
-      
+      {/* ── IVAMIND SANDBOX — Muapi arraché, BYOK Gemini direct ── */}
+      <div className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between gap-4 px-4 py-2 text-xs" style={{
+        background: 'linear-gradient(90deg, rgba(249,178,51,0.18), rgba(249,178,51,0.06))',
+        borderBottom: '1px solid rgba(249,178,51,0.45)',
+        color: '#f9b233',
+      }}>
+        <span className="flex items-center gap-2">
+          <span className="font-bold tracking-widest">⚡ SANDBOX</span>
+          <span className="opacity-85">Image Studio BYOK · Muapi arraché, route Gemini 2.5 Flash Image direct. Models 50+ t2i / 55+ i2i accessibles.</span>
+        </span>
+        <a href="/ivamind/dashboard" className="underline opacity-80 hover:opacity-100">← Retour IVAMIND</a>
+      </div>
+
       {/* ── CENTRAL GALLERY AREA ── */}
       <div className="flex-1 w-full max-w-7xl mx-auto overflow-y-auto custom-scrollbar pb-40 lg:pb-32 px-2">
         {history.length > 0 ? (

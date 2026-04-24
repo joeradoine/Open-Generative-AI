@@ -106,9 +106,16 @@ export default function GeneratePage() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // Augmente le prompt avec camera preset + style bundle si sélectionnés
+  // Augmente le prompt avec camera preset + style bundle + directive anti-ref-copy.
+  // Si refs présents, on ajoute une directive pour que Gemini traite le prompt comme LA NOUVELLE SCÈNE
+  // et les refs uniquement comme CHARACTER IDENTITY ANCHORS (pas comme scène à copier).
   const buildFinalPrompt = () => {
-    const parts = [prompt];
+    const parts = [];
+    const hasRefs = (customRefs.length > 0) || (lockToBible && preset.characters.some(id => CHAR_BY_ID[id]?.refUrl));
+    if (hasRefs) {
+      parts.push('NEW SCENE (described below). Reference images are FACE IDENTITY ANCHORS only — preserve facial identity, ignore refs background/pose/lighting.');
+    }
+    parts.push(prompt);
     const cp = CAMERA_PRESETS.find(p => p.id === cameraPreset);
     if (cp?.promptHint) parts.push(cp.promptHint);
     const sb = buildStyleHint(styleBundle);
@@ -283,9 +290,10 @@ export default function GeneratePage() {
 
             {/* Camera preset picker */}
             <div className="row gap-2" style={{ marginTop: 4 }}>
-              <span className="section-label">Camera movement</span>
+              <span className="section-label">Framing & angle</span>
               <div style={{ flex: 1 }} />
-              {cameraPreset && <button className="t-11 muted-2" onClick={() => setCameraPreset(null)} style={{ background:'none', border:'none', cursor:'pointer' }}>clear</button>}
+              <span className="t-11 muted-2">image statique</span>
+              {cameraPreset && <button className="t-11 muted-2" onClick={() => setCameraPreset(null)} style={{ background:'none', border:'none', cursor:'pointer', marginLeft: 6 }}>clear</button>}
             </div>
             <select
               value={cameraPreset || ''}
@@ -309,21 +317,27 @@ export default function GeneratePage() {
                 cursor: 'pointer',
               }}
             >
-              <option value="">— Aucun mouvement (static) —</option>
+              <option value="">— Aucun cadrage spécifique —</option>
+              {/* Seuls les presets applicables à une image statique (pas de mouvement video) */}
               {Object.entries(PRESET_CATEGORIES).map(([catKey, cat]) => {
+                // Categories "dolly" / "pan" / "tilt" / "zoom" / "crane" / "arc" / "temporal" / "dynamic" = VIDEO-only movements — skip ici
+                if (!['static'].includes(catKey)) return null;
                 const items = CAMERA_PRESETS.filter(p => p.category === catKey);
                 if (!items.length) return null;
                 return (
                   <optgroup key={catKey} label={cat.label}>
                     {items.map(p => (
                       <option key={p.id} value={p.id}>
-                        {p.label} · {p.tier === 1 ? 'free Remotion' : p.cost} · {p.usage}% pros
+                        {p.label} — {p.useCase}
                       </option>
                     ))}
                   </optgroup>
                 );
               })}
             </select>
+            <span className="t-11 muted-2" style={{ lineHeight: 1.4 }}>
+              💡 Les mouvements caméra (Dolly / Pan / Crane / Zoom etc.) seront dispos dans <a href="/studio/video" style={{ color:'var(--gold)', textDecoration:'underline' }}>/studio/video</a> pour générer des clips Kling.
+            </span>
             {cameraPreset && (
               <span className="t-11 muted-2" style={{ lineHeight: 1.4 }}>
                 {CAMERA_PRESETS.find(p => p.id === cameraPreset)?.useCase}

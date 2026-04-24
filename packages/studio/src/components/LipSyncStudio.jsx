@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { processLipSync, uploadFile } from "../muapi.js";
+// IVAMIND 2026-04-24 — Muapi lip-sync bypass. processLipSync → stub "route à câbler Sprint 1.4".
+// Quand /api/byok/generate/lipsync existe (Kling v1.6 / Hunyuan / Omni-lip), on remplace ce stub.
+import { uploadFile } from "../muapi.js";
+const processLipSync = async (_apiKey, _params) => {
+  throw new Error('Lip-sync BYOK pas encore câblé — Sprint 1.4. Les providers Kling v1.6 lip-sync et Hunyuan Avatar seront ajoutés prochainement. En attendant, utilise /studio/video pour la génération i2v basique.');
+};
 import {
   lipsyncModels,
   imageLipSyncModels,
