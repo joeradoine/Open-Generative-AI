@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Badge, I, Kbd } from '@/src/components/studio-chrome';
 import { CHARACTERS, CHAR_BY_ID } from '@/src/data/ivamind-mock';
+import { CAMERA_PRESETS, PRESET_CATEGORIES, FREE_PRESETS } from '@/src/data/camera-presets';
 
 const SHOT_PRESETS = [
   {
