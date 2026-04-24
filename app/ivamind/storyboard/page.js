@@ -1,12 +1,28 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Badge, I, Kbd } from '@/src/components/studio-chrome';
 import { EP02_STORYBOARD, CHAR_BY_ID } from '@/src/data/ivamind-mock';
 
 export default function StoryboardPage() {
+  const router = useRouter();
   const sb = EP02_STORYBOARD;
   const [selected, setSelected] = useState(sb.panels[6]); // Issa sait (flagship panel)
+
+  // Build prompt from panel context + route to Generate studio
+  const goToGenerateForPanel = (panel, variantsCount = 9) => {
+    const charList = panel.chars.map(id => CHAR_BY_ID[id]?.name).filter(Boolean).join(', ');
+    const prompt = [
+      panel.title,
+      panel.note,
+      panel.cam ? `${panel.cam} framing` : '',
+      charList ? `with ${charList}` : '',
+      sb.scene?.mood ? `mood: ${sb.scene.mood}` : '',
+    ].filter(Boolean).join('. ');
+    const url = `/ivamind/generate?prompt=${encodeURIComponent(prompt)}&panel=${panel.id}&grid=${variantsCount}`;
+    router.push(url);
+  };
 
   const totalDur = sb.panels.reduce((a, p) => a + p.dur, 0).toFixed(1);
 
@@ -132,10 +148,20 @@ export default function StoryboardPage() {
               </div>
             )}
             <div className="row gap-2">
-              <button className="btn btn-secondary btn-sm" style={{ flex: 1, justifyContent: 'center' }}>
+              <button
+                className="btn btn-secondary btn-sm"
+                style={{ flex: 1, justifyContent: 'center' }}
+                onClick={() => goToGenerateForPanel(selected, 4)}
+                title="Ouvre Generate avec 4 variantes pour ce panel"
+              >
                 <I.refresh size={11} />Regen
               </button>
-              <button className="btn btn-secondary btn-sm" style={{ flex: 1, justifyContent: 'center' }}>
+              <button
+                className="btn btn-secondary btn-sm"
+                style={{ flex: 1, justifyContent: 'center' }}
+                onClick={() => goToGenerateForPanel(selected, 9)}
+                title="Ouvre Generate avec 9 variantes pour ce panel"
+              >
                 <I.grid size={11} />Variants
               </button>
             </div>
@@ -179,7 +205,12 @@ export default function StoryboardPage() {
             <InspectorKV k="Style" v="Madhouse 90s · cel-shade" />
             <InspectorKV k="Aspect" v="9:16" />
             <InspectorKV k="Seed" v={'— (unlock to regen)'} />
-            <button className="btn btn-primary btn-sm" style={{ marginTop: 8, justifyContent: 'center' }}>
+            <button
+              className="btn btn-primary btn-sm"
+              style={{ marginTop: 8, justifyContent: 'center' }}
+              onClick={() => goToGenerateForPanel(selected, 9)}
+              title="Ouvre Generate studio et lance une batch Gemini 9 variantes bible locked"
+            >
               <I.sparkle size={12} />Generate 9 variants
             </button>
           </div>

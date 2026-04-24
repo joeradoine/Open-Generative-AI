@@ -21,28 +21,6 @@ export const EPISODES = [
     thumbnail:'ep-enfants-priere/thumbnail-ep02-fr-v3-issa.png',
     note:'FLAGSHIP — base de référence · thumbnail "ISSA SAIT." validé',
   },
-  {
-    num:'EP-03', title:'Tawakkul — le jour où j\'ai lâché',
-    status:'Script', statusVariant:'gold',
-    progress:2, costUSD:0.05, costKling:0, dur:'—', shots:12,
-    char:['omar','radoine'], updated:'today', active:true,
-    note:'En cours — script en rédaction',
-  },
-  {
-    num:'S1E1', title:'La fatigue invisible d\'une mère',
-    status:'Pilot', statusVariant:'neutral',
-    progress:9, costUSD:2.37, costKling:38, dur:'1:12', shots:11,
-    char:['soukaina','omar','imran','issa','zayed'], updated:'1 w ago',
-    thumbnail:'ivamind-bank-unified/s1e1/p04-soukaina-entree-carrefour.png',
-    note:'Pilote palier premium — benchmark interne, NON postable publiquement',
-  },
-  {
-    num:'EP-01', title:'PARDON',
-    status:'Archived', statusVariant:'neutral',
-    progress:9, costUSD:0.70, costKling:10, dur:'1:22', shots:10,
-    char:['omar','radoine','soukaina'], updated:'3 w ago',
-    note:'v3 validé — ancien template, remplacé par EP02+ (archivé)',
-  },
 ];
 
 export const CHARACTERS = [
@@ -74,19 +52,42 @@ export const PIPELINE_STEPS = [
   { key: 'export',     label: 'Export' },
 ];
 
-// EP-02 storyboard canonical — flagship reference
+// EP-02 storyboard — flagship reference "Ce que ces enfants savent" (enfants + prière)
 export const EP02_STORYBOARD = {
   ep:'EP-02', title:'Ce que ces enfants savent', locked:true, version:'v7',
-  scene:{ name:'Caisse supermarché · Prière', location:'Carrefour Paris', time:'afternoon', mood:'Tender · revelation' },
-  script:'La caissière demande si elle a la carte fidélité. Soukaina répond doucement qu\'elle n\'en a pas. Mais regarde bien. En haut, les trois petits. En bas, le tapis qu\'elle vient de dérouler. Quand la prière commence, la sakina descend.',
+  scene:{ name:'Chambre familiale · Prière', location:'Intérieur maison', time:'late afternoon', mood:'Tender · revelation' },
+  script:'Les trois petits explosent de joie. Zayed crie. Issa roule le tapis. Imran saute sur le lit. Mais quand Soukaina lève les mains, la sakina descend — et ce sont les enfants qui enseignent.',
   panels:[
-    { id:'p01', title:'Soukaina caisse',           status:'locked', note:'Carte fidélité?', chars:['soukaina'], cam:'medium-35mm', dur:2.8, image:'/ivamind-bank-unified/s1e1/p04-soukaina-entree-carrefour.png' },
-    { id:'p02', title:'Les trois petits agités',   status:'locked', note:'Imran/Issa/Zayed', chars:['imran','issa','zayed'], cam:'wide-24mm', dur:3.1, image:'/ep-enfants-priere/p01-trois-petits-explosent.png' },
-    { id:'p03', title:'Tapis de prière déroulé',   status:'locked', note:'Geste invisible', chars:[], cam:'insert-50', dur:1.8, image:'/ep-enfants-priere/h02-issa-roule-tapis.png' },
-    { id:'p04', title:'Pivot — mais regarde bien', status:'locked', note:'Narrator whisper', chars:[], cam:'extreme-close', dur:2.4, image:'/ep-enfants-priere/h08-omar-regard-silencieux.png' },
-    { id:'p05', title:'Sakina descend',            status:'locked', note:'Acte 4 révélation', chars:['soukaina'], cam:'low-angle', dur:4.2, image:'/ep-enfants-priere/h06-sujud-halo-backlight.png' },
-    { id:'p06', title:'Les enfants calmés',        status:'locked', note:'Silence imposé', chars:['imran','issa','zayed'], cam:'wide-symmetric', dur:3.7, image:'/ep-enfants-priere/p05-soukaina-silhouette-tahrim.png' },
-    { id:'p07', title:'Issa contemplatif',         status:'locked', note:'ISSA SAIT — thumbnail shot', chars:['issa'], cam:'close-up-85', dur:2.0, image:'/ep-enfants-priere/p04-zayed-sparkle-yeux.png' },
-    { id:'p08', title:'Mains qui joignent',        status:'locked', note:'Geste imitation', chars:['soukaina','issa'], cam:'insert-macro', dur:1.5, image:'/ep-enfants-priere/h05-soukaina-mains-levees.png' },
+    { id:'p01', title:'Les trois petits explosent',  status:'locked', note:'Acte 1 — chaos joyeux', chars:['imran','issa','zayed'], cam:'wide-24mm', dur:2.5, image:'/ep-enfants-priere/p01-trois-petits-explosent.png' },
+    { id:'p02', title:'Issa roule le tapis',         status:'locked', note:'Geste spontané enfant',  chars:['issa'],                  cam:'medium-35mm', dur:2.2, image:'/ep-enfants-priere/h02-issa-roule-tapis.png' },
+    { id:'p03', title:'Soukaina mains levées',       status:'locked', note:'Takbîr — entrée prière', chars:['soukaina'],              cam:'low-angle', dur:3.0, image:'/ep-enfants-priere/h05-soukaina-mains-levees.png' },
+    { id:'p04', title:'Soukaina profil Allahu Akbar',status:'locked', note:'Révélation spirituelle', chars:['soukaina'],              cam:'close-up-85', dur:2.4, image:'/ep-enfants-priere/p06-soukaina-profil-allahou-akbar.png' },
+    { id:'p05', title:'Sujud halo backlight',        status:'locked', note:'Sakina descend',         chars:['soukaina'],              cam:'wide-symmetric', dur:4.2, image:'/ep-enfants-priere/h06-sujud-halo-backlight.png' },
+    { id:'p06', title:'Silhouette tahrim',           status:'locked', note:'Silence imposé',         chars:['soukaina'],              cam:'silhouette', dur:2.8, image:'/ep-enfants-priere/p05-soukaina-silhouette-tahrim.png' },
+    { id:'p07', title:'Zayed sparkle yeux — ISSA SAIT',status:'locked', note:'Thumbnail flagship',     chars:['zayed'],                 cam:'extreme-close', dur:2.0, image:'/ep-enfants-priere/p04-zayed-sparkle-yeux.png' },
+    { id:'p08', title:'Omar regard silencieux',      status:'locked', note:'Témoin révélation',      chars:['omar'],                  cam:'close-up-85', dur:2.0, image:'/ep-enfants-priere/h08-omar-regard-silencieux.png' },
   ],
+};
+
+// EP-Partage storyboard — delivered v22 "Ce qu'on aime" (Omar + partage)
+export const EP_PARTAGE_STORYBOARD = {
+  ep:'EP-Partage', title:'Ce qu\'on aime', locked:true, version:'v22',
+  scene:{ name:'Chambre Omar · Partage', location:'Intérieur famille', time:'afternoon', mood:'Tension · rédemption' },
+  script:'Omar compte les pièces. Son poing se serre sur la boîte. Le miroir montre les deux. Mais quand Zayed reçoit la carte, c\'est le poing qui s\'ouvre — et le mot qui n\'a pas de traduction trouve sa forme.',
+  panels:[
+    { id:'p01', title:'Omar pièces macro',             status:'locked', note:'Hook ouverture', chars:['omar'],    cam:'insert-macro', dur:2.0, image:'/ep-partage/p-hook-a-omar-pieces.png' },
+    { id:'p02', title:'Omar conflit intérieur',        status:'locked', note:'Tension morale', chars:['omar'],    cam:'close-up-85', dur:2.5, image:'/ep-partage/p-hook-omar-conflit.png' },
+    { id:'p03', title:'Omar poing serré sur la boîte', status:'locked', note:'Résistance',     chars:['omar'],    cam:'insert-50',   dur:2.2, image:'/ep-partage/p-hook-d-omar-poing-boite.png' },
+    { id:'p04', title:'Miroir dualité',                status:'locked', note:'Double moral',   chars:['omar'],    cam:'medium-35mm', dur:2.6, image:'/ep-partage/p02-mirror.png' },
+    { id:'p05', title:'Trois frères assis',            status:'locked', note:'Famille attend', chars:['imran','issa','zayed'], cam:'wide-24mm', dur:3.0, image:'/ep-partage/p03-trois-freres-assis.png' },
+    { id:'p06', title:'Miroir dualité pleine',         status:'locked', note:'Acte III pivot', chars:['omar'],    cam:'medium-35mm', dur:2.6, image:'/ep-partage/p-miroir-dualite.png' },
+    { id:'p07', title:'Zayed reçoit la carte',         status:'locked', note:'Don accompli',   chars:['zayed','omar'], cam:'wide-symmetric', dur:3.5, image:'/ep-partage/p-zayed-recoit-carte.png' },
+    { id:'p08', title:'Mot intraduisible',             status:'locked', note:'Signature outro',chars:[],          cam:'text-frame', dur:2.0, image:'/ep-partage/p-mot-intraduisible.png' },
+  ],
+};
+
+// Storyboards par EP — ajoute les nouveaux EPs ici au fur et à mesure
+export const STORYBOARDS = {
+  'EP-Partage': EP_PARTAGE_STORYBOARD,
+  'EP-02': EP02_STORYBOARD,
 };

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Badge, I, Kbd } from '@/src/components/studio-chrome';
 import { CHARACTERS, CHAR_BY_ID } from '@/src/data/ivamind-mock';
 import { CAMERA_PRESETS, PRESET_CATEGORIES, FREE_PRESETS } from '@/src/data/camera-presets';
@@ -30,9 +31,14 @@ const SHOT_PRESETS = [
 const GRID_SIZES = [4, 9, 16];
 
 export default function GeneratePage() {
+  const searchParams = useSearchParams();
+  const urlPrompt = searchParams?.get('prompt');
+  const urlGrid = parseInt(searchParams?.get('grid') || '0', 10);
+  const urlPanel = searchParams?.get('panel');
+
   const [preset, setPreset] = useState(SHOT_PRESETS[0]);
-  const [prompt, setPrompt] = useState(SHOT_PRESETS[0].prompt);
-  const [gridSize, setGridSize] = useState(9);
+  const [prompt, setPrompt] = useState(urlPrompt || SHOT_PRESETS[0].prompt);
+  const [gridSize, setGridSize] = useState([4, 9, 16].includes(urlGrid) ? urlGrid : 9);
   const [tiles, setTiles] = useState([]);           // [{id,seed,status,url,cost,error,score}]
   const [shortlist, setShortlist] = useState([]);   // array of tile ids (ordered)
   const [focused, setFocused] = useState(0);
@@ -62,15 +68,45 @@ export default function GeneratePage() {
 
   const selectPreset = (p) => { setPreset(p); setPrompt(p.prompt); setTiles([]); setShortlist([]); };
 
-  // Build refs[] payload : custom uploads prioritaires + bible refs en complément, cap 4 total.
+  // Retourne les 4 refs L1 d'un perso (front / 3/4L / 3/4R / profile)
+  const getCharacterL1Refs = (characterId) => [
+    `/character-refs/${characterId}-01-front.png`,          // flat path (existant)
+    `/character-refs/${characterId}/02-three-quarter-left.png`,
+    `/character-refs/${characterId}/03-three-quarter-right.png`,
+    `/character-refs/${characterId}/04-profile.png`,
+  ];
+
+  // Build refs[] smart : best-practice 2026 Gemini = 3-4 refs/perso pour cohérence maximale.
+  // Cap total 4 (MAX_REFS adapter). Logique :
+  //  - customRefs prioritaires (user choice)
+  //  - 1 perso  → 4 refs L1 (front + 3/4L + 3/4R + profile)
+  //  - 2 persos → 2 refs chacun (front + 3/4L)
+  //  - 3-4 persos → 1 ref chacun (front seulement)
+  //  - customRefs remplacent autant de slots bible en partant du bas.
   const buildRefs = () => {
     const refs = [];
     customRefs.forEach(r => refs.push({ url: r.dataUrl, role: 'custom', label: r.name }));
+
     if (lockToBible) {
-      preset.characters
+      const chars = preset.characters
         .map(id => CHAR_BY_ID[id])
-        .filter(c => c && c.refUrl)
-        .forEach(c => refs.push({ url: c.refUrl, role: 'face', characterId: c.id }));
+        .filter(c => c && c.refUrl);
+
+      const remaining = 4 - refs.length;
+      if (remaining > 0 && chars.length > 0) {
+        const perChar = chars.length === 1 ? 4 : chars.length === 2 ? 2 : 1;
+        for (const c of chars) {
+          const l1Refs = getCharacterL1Refs(c.id);
+          for (let i = 0; i < perChar && refs.length < 4; i++) {
+            refs.push({
+              url: l1Refs[i],
+              role: 'face',
+              characterId: c.id,
+              angle: ['front', '3/4-left', '3/4-right', 'profile'][i],
+            });
+          }
+        }
+      }
     }
     return refs.slice(0, 4);
   };
@@ -273,7 +309,23 @@ export default function GeneratePage() {
               value={cameraPreset || ''}
               onChange={e => setCameraPreset(e.target.value || null)}
               className="input"
-              style={{ padding: 8, fontSize: 12, background: 'var(--bg-2)' }}
+              style={{
+                padding: '10px 32px 10px 12px',
+                fontSize: 13,
+                lineHeight: 1.4,
+                background: 'var(--bg-2)',
+                border: '1px solid var(--border-600)',
+                borderRadius: 'var(--r-2)',
+                color: 'var(--text-0)',
+                fontFamily: 'var(--f-sans)',
+                appearance: 'none',
+                WebkitAppearance: 'none',
+                MozAppearance: 'none',
+                backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23f9b233\' stroke-width=\'2\'%3e%3cpath d=\'m6 9 6 6 6-6\'/%3e%3c/svg%3e")',
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 10px center',
+                cursor: 'pointer',
+              }}
             >
               <option value="">— Aucun mouvement (static) —</option>
               {Object.entries(PRESET_CATEGORIES).map(([catKey, cat]) => {
@@ -306,7 +358,23 @@ export default function GeneratePage() {
               value={styleBundle || ''}
               onChange={e => setStyleBundle(e.target.value || null)}
               className="input"
-              style={{ padding: 8, fontSize: 12, background: 'var(--bg-2)' }}
+              style={{
+                padding: '10px 32px 10px 12px',
+                fontSize: 13,
+                lineHeight: 1.4,
+                background: 'var(--bg-2)',
+                border: '1px solid var(--border-600)',
+                borderRadius: 'var(--r-2)',
+                color: 'var(--text-0)',
+                fontFamily: 'var(--f-sans)',
+                appearance: 'none',
+                WebkitAppearance: 'none',
+                MozAppearance: 'none',
+                backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23f9b233\' stroke-width=\'2\'%3e%3cpath d=\'m6 9 6 6 6-6\'/%3e%3c/svg%3e")',
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 10px center',
+                cursor: 'pointer',
+              }}
             >
               <option value="">— Aucun bundle (prompt tel quel) —</option>
               {STYLE_BUNDLES.map(b => (
