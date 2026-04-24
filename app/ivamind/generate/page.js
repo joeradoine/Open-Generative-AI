@@ -52,6 +52,16 @@ export default function GeneratePage() {
   const [cameraPreset, setCameraPreset] = useState(null);    // preset mouvement caméra (Dolly In, etc.)
   const [styleBundle, setStyleBundle] = useState(null);      // bundle style (IVAMIND manga, Netflix, etc.)
   const [useNanoBanana2, setUseNanoBanana2] = useState(false); // Gemini 3.1 Flash Image — 14 refs au lieu de 4
+  const [customBank, setCustomBank] = useState([]);        // persos custom registered via /ivamind/characters/new
+  const [selectedCustomId, setSelectedCustomId] = useState(null);
+
+  // Load custom characters au mount
+  useEffect(() => {
+    fetch('/api/byok/characters/register')
+      .then(r => r.json())
+      .then(data => setCustomBank(data.characters || []))
+      .catch(() => {});
+  }, []);
   const tilesRef = useRef(tiles);
   const focusedRef = useRef(focused);
   useEffect(() => { tilesRef.current = tiles; }, [tiles]);
@@ -75,8 +85,21 @@ export default function GeneratePage() {
   const buildRefs = () => {
     const cap = useNanoBanana2 ? 14 : 4;
     const refs = [];
-    customRefs.forEach(r => refs.push({ url: r.dataUrl, role: 'custom', label: r.name, reason: 'uploadé par l\'utilisateur' }));
+    // 1. Custom uploads user (drag-drop direct)
+    customRefs.forEach(r => refs.push({ url: r.dataUrl, role: 'custom-upload', label: r.name, reason: 'uploadé par l\'utilisateur' }));
 
+    // 2. Custom character registered (Soul ID-style) — inject ses refUrls
+    if (selectedCustomId && refs.length < cap) {
+      const customChar = customBank.find(c => c.id === selectedCustomId);
+      if (customChar?.refUrls?.length) {
+        for (const url of customChar.refUrls) {
+          if (refs.length >= cap) break;
+          refs.push({ url, role: 'custom-character', label: customChar.name, characterId: customChar.id, reason: `${customChar.name} (custom register)` });
+        }
+      }
+    }
+
+    // 3. Bible IVAMIND refs (smart picker L1-L5)
     if (lockToBible && refs.length < cap) {
       const context = {
         prompt,
@@ -395,6 +418,46 @@ export default function GeneratePage() {
                   {buildFinalPrompt()}
                 </div>
               </details>
+            )}
+
+            {/* Custom character picker — persos registered via /ivamind/characters/new */}
+            {customBank.length > 0 && (
+              <div className="col gap-1" style={{ marginTop: 4 }}>
+                <div className="row gap-2">
+                  <span className="section-label">Custom character</span>
+                  <div style={{ flex: 1 }} />
+                  {selectedCustomId && (
+                    <button className="t-11 muted-2" onClick={() => setSelectedCustomId(null)} style={{ background:'none', border:'none', cursor:'pointer' }}>clear</button>
+                  )}
+                </div>
+                <select
+                  value={selectedCustomId || ''}
+                  onChange={e => setSelectedCustomId(e.target.value || null)}
+                  className="input"
+                  style={{
+                    padding: '8px 30px 8px 10px', fontSize: 12, background: 'var(--bg-2)',
+                    border: '1px solid var(--border-600)', borderRadius: 'var(--r-2)',
+                    color: 'var(--text-0)', cursor: 'pointer',
+                    appearance: 'none', WebkitAppearance: 'none',
+                    backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23f9b233\' stroke-width=\'2\'%3e%3cpath d=\'m6 9 6 6 6-6\'/%3e%3c/svg%3e")',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 10px center',
+                  }}
+                >
+                  <option value="">— Aucun perso custom (bible only) —</option>
+                  {customBank.map(c => (
+                    <option key={c.id} value={c.id}>{c.name} · {c.photosCount || c.refUrls?.length || 0} refs</option>
+                  ))}
+                </select>
+                {selectedCustomId && (
+                  <span className="t-11 muted-2">
+                    → {customBank.find(c => c.id === selectedCustomId)?.refUrls?.length || 0} refs du perso custom injectées (prioritaire sur bible)
+                  </span>
+                )}
+                <Link href="/ivamind/characters/new" className="t-11 muted-2" style={{ textDecoration: 'underline' }}>
+                  + Register new character
+                </Link>
+              </div>
             )}
 
             {/* Toggle Nano Banana 2 (Gemini 3.1) — 14 refs au lieu de 4 */}
