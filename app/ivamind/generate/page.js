@@ -38,6 +38,8 @@ export default function GeneratePage() {
   const [startedAt, setStartedAt] = useState(null);
   const [compareMode, setCompareMode] = useState(false); // fullscreen preview of focused tile
   const [lockToBible, setLockToBible] = useState(true);  // i2i refs injection toggle
+  const [customRefs, setCustomRefs] = useState([]);      // user-uploaded data URIs for i2i
+  const fileInputRef = useRef(null);
   const tilesRef = useRef(tiles);
   const focusedRef = useRef(focused);
   useEffect(() => { tilesRef.current = tiles; }, [tiles]);
@@ -56,15 +58,30 @@ export default function GeneratePage() {
 
   const selectPreset = (p) => { setPreset(p); setPrompt(p.prompt); setTiles([]); setShortlist([]); };
 
-  // Build refs[] payload from preset characters when lockToBible is on.
-  // Max 4 refs (Gemini MAX_REFS — best practice 2026). Primary ordering from preset.characters.
+  // Build refs[] payload : custom uploads prioritaires + bible refs en complément, cap 4 total.
   const buildRefs = () => {
-    if (!lockToBible) return [];
-    return preset.characters
-      .map(id => CHAR_BY_ID[id])
-      .filter(c => c && c.refUrl)
-      .slice(0, 4)
-      .map(c => ({ url: c.refUrl, role: 'face', characterId: c.id }));
+    const refs = [];
+    customRefs.forEach(r => refs.push({ url: r.dataUrl, role: 'custom', label: r.name }));
+    if (lockToBible) {
+      preset.characters
+        .map(id => CHAR_BY_ID[id])
+        .filter(c => c && c.refUrl)
+        .forEach(c => refs.push({ url: c.refUrl, role: 'face', characterId: c.id }));
+    }
+    return refs.slice(0, 4);
+  };
+
+  const handleUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
+    const reads = files.map(file => new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve({ name: file.name, dataUrl: reader.result, size: file.size });
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    }));
+    const added = await Promise.all(reads);
+    setCustomRefs(prev => [...prev, ...added].slice(0, 4));
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const generateTile = async (tile, idx) => {
@@ -275,10 +292,78 @@ export default function GeneratePage() {
               })}
             </div>
             <span className="t-11 muted-2">
-              {lockToBible
-                ? `→ ${Math.min(preset.characters.length, 4)} ref(s) injected as inline_data · Gemini i2i`
-                : '→ text-only prompt · Gemini t2i (character consistency low)'}
+              {(() => {
+                const total = buildRefs().length;
+                return total > 0
+                  ? `→ ${total} ref(s) injected as inline_data · Gemini i2i`
+                  : '→ text-only prompt · Gemini t2i';
+              })()}
             </span>
+
+            {/* Upload custom refs */}
+            <div className="row gap-2" style={{ marginTop: 8 }}>
+              <span className="section-label">Custom upload</span>
+              <div style={{ flex: 1 }} />
+              <span className="t-11 muted-2">{customRefs.length}/4 slots</span>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              multiple
+              onChange={handleUpload}
+              style={{ display: 'none' }}
+            />
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={e => { e.preventDefault(); e.stopPropagation(); }}
+              onDrop={async (e) => {
+                e.preventDefault();
+                const files = Array.from(e.dataTransfer.files || []).filter(f => f.type.startsWith('image/'));
+                if (!files.length) return;
+                const reads = files.map(file => new Promise((resolve) => {
+                  const reader = new FileReader();
+                  reader.onload = () => resolve({ name: file.name, dataUrl: reader.result, size: file.size });
+                  reader.readAsDataURL(file);
+                }));
+                const added = await Promise.all(reads);
+                setCustomRefs(prev => [...prev, ...added].slice(0, 4));
+              }}
+              style={{
+                border: '1px dashed var(--border-500)',
+                borderRadius: 'var(--r-2)',
+                padding: '12px',
+                textAlign: 'center',
+                cursor: 'pointer',
+                background: 'var(--bg-2)',
+              }}
+            >
+              <div className="t-12 muted">Drop images or click to upload</div>
+              <div className="t-11 muted-2" style={{ marginTop: 2 }}>PNG/JPG/WebP · max 4 · injectées avant bible refs</div>
+            </div>
+            {customRefs.length > 0 && (
+              <div className="row gap-2" style={{ flexWrap: 'wrap' }}>
+                {customRefs.map((r, i) => (
+                  <div key={i} className="row gap-2" style={{
+                    padding: 4,
+                    border: '1px solid var(--gold)',
+                    borderRadius: 'var(--r-2)',
+                    background: 'var(--gold-ghost)',
+                  }}>
+                    <img src={r.dataUrl} alt={r.name} style={{
+                      width: 28, height: 28, borderRadius: 4, objectFit: 'cover',
+                    }} />
+                    <span className="t-11 truncate" style={{ maxWidth: 100 }}>{r.name}</span>
+                    <button
+                      className="iconbtn"
+                      onClick={(e) => { e.stopPropagation(); setCustomRefs(prev => prev.filter((_, j) => j !== i)); }}
+                      title="Remove">
+                      <I.x size={10} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
