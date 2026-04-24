@@ -81,7 +81,7 @@ export function ProgressSegmented({ progress, error }) {
 // ─── Sidebar ───
 const NAV_ITEMS = [
   { key:'dashboard',    href:'/ivamind/dashboard',    label:'Dashboard',  icon:I.home,     badge:null },
-  { key:'episodes',     href:'/ivamind/dashboard',    label:'Episodes',   icon:I.film,     badge:'12' },
+  { key:'episodes',     href:'/ivamind/dashboard',    label:'Episodes',   icon:I.film,     badge:'5' },
   { key:'characters',   href:'/ivamind/characters',   label:'Characters', icon:I.users,    badge:'6' },
   { key:'storyboard',   href:'/ivamind/storyboard',   label:'Storyboard', icon:I.layers,   badge:null },
   { key:'generate',     href:'/ivamind/generate',     label:'Generate',   icon:I.sparkle,  badge:null },

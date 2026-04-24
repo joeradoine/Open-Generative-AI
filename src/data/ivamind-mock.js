@@ -43,48 +43,6 @@ export const EPISODES = [
     char:['omar','radoine','soukaina'], updated:'3 w ago',
     note:'v3 validé — ancien template, remplacé par EP02+ (archivé)',
   },
-  {
-    num:'EP-04', title:'La zakat d\'un enfant',
-    status:'Backlog', statusVariant:'neutral',
-    progress:0, costUSD:0, costKling:0, dur:'—', shots:0,
-    char:['imran','issa'], updated:'—',
-  },
-  {
-    num:'EP-05', title:'Laylat al-Qadr',
-    status:'Backlog', statusVariant:'neutral',
-    progress:0, costUSD:0, costKling:0, dur:'—', shots:0,
-    char:['omar','radoine','soukaina'], updated:'—',
-  },
-  {
-    num:'EP-06', title:'Sabr — l\'attente',
-    status:'Backlog', statusVariant:'neutral',
-    progress:0, costUSD:0, costKling:0, dur:'—', shots:0,
-    char:['omar','zayed'], updated:'—',
-  },
-  {
-    num:'EP-07', title:'Luqman et son fils',
-    status:'Backlog', statusVariant:'neutral',
-    progress:0, costUSD:0, costKling:0, dur:'—', shots:0,
-    char:['omar','imran'], updated:'—',
-  },
-  {
-    num:'EP-08', title:'Le bon voisin',
-    status:'Backlog', statusVariant:'neutral',
-    progress:0, costUSD:0, costKling:0, dur:'—', shots:0,
-    char:['zayed','issa'], updated:'—',
-  },
-  {
-    num:'EP-09', title:'Dhikr — le cœur qui se rappelle',
-    status:'Backlog', statusVariant:'neutral',
-    progress:0, costUSD:0, costKling:0, dur:'—', shots:0,
-    char:[], updated:'—',
-  },
-  {
-    num:'EP-10', title:'Pourquoi on prie',
-    status:'Backlog', statusVariant:'neutral',
-    progress:0, costUSD:0, costKling:0, dur:'—', shots:0,
-    char:[], updated:'—',
-  },
 ];
 
 export const CHARACTERS = [
