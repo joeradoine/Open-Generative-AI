@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { Badge, I, Kbd } from '@/src/components/studio-chrome';
 import { CHARACTERS, CHAR_BY_ID } from '@/src/data/ivamind-mock';
 import { CAMERA_PRESETS, PRESET_CATEGORIES, FREE_PRESETS } from '@/src/data/camera-presets';
+import { STYLE_BUNDLES, buildStyleHint } from '@/src/data/camera-styles';
 
 const SHOT_PRESETS = [
   {
@@ -41,6 +42,8 @@ export default function GeneratePage() {
   const [lockToBible, setLockToBible] = useState(true);  // i2i refs injection toggle
   const [customRefs, setCustomRefs] = useState([]);      // user-uploaded data URIs for i2i
   const fileInputRef = useRef(null);
+  const [cameraPreset, setCameraPreset] = useState(null);    // preset mouvement caméra (Dolly In, etc.)
+  const [styleBundle, setStyleBundle] = useState(null);      // bundle style (IVAMIND manga, Netflix, etc.)
   const tilesRef = useRef(tiles);
   const focusedRef = useRef(focused);
   useEffect(() => { tilesRef.current = tiles; }, [tiles]);
@@ -85,14 +88,25 @@ export default function GeneratePage() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  // Augmente le prompt avec camera preset + style bundle si sélectionnés
+  const buildFinalPrompt = () => {
+    const parts = [prompt];
+    const cp = CAMERA_PRESETS.find(p => p.id === cameraPreset);
+    if (cp?.promptHint) parts.push(cp.promptHint);
+    const sb = buildStyleHint(styleBundle);
+    if (sb) parts.push(sb);
+    return parts.filter(Boolean).join('. ');
+  };
+
   const generateTile = async (tile, idx) => {
     try {
       const refs = buildRefs();
+      const finalPrompt = buildFinalPrompt();
       const resp = await fetch('/api/byok/generate/image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt,
+          prompt: finalPrompt,
           aspectRatio: preset.aspectRatio,
           seed: tile.seed,
           forceProvider: 'gemini',
@@ -248,6 +262,72 @@ export default function GeneratePage() {
               rows={10}
               style={{ height:'auto', minHeight: 160, padding: 10, fontFamily:'var(--f-sans)', fontSize: 12, lineHeight: 1.5, resize:'vertical' }}
             />
+
+            {/* Camera preset picker */}
+            <div className="row gap-2" style={{ marginTop: 4 }}>
+              <span className="section-label">Camera movement</span>
+              <div style={{ flex: 1 }} />
+              {cameraPreset && <button className="t-11 muted-2" onClick={() => setCameraPreset(null)} style={{ background:'none', border:'none', cursor:'pointer' }}>clear</button>}
+            </div>
+            <select
+              value={cameraPreset || ''}
+              onChange={e => setCameraPreset(e.target.value || null)}
+              className="input"
+              style={{ padding: 8, fontSize: 12, background: 'var(--bg-2)' }}
+            >
+              <option value="">— Aucun mouvement (static) —</option>
+              {Object.entries(PRESET_CATEGORIES).map(([catKey, cat]) => {
+                const items = CAMERA_PRESETS.filter(p => p.category === catKey);
+                if (!items.length) return null;
+                return (
+                  <optgroup key={catKey} label={cat.label}>
+                    {items.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.label} · {p.tier === 1 ? 'free Remotion' : p.cost} · {p.usage}% pros
+                      </option>
+                    ))}
+                  </optgroup>
+                );
+              })}
+            </select>
+            {cameraPreset && (
+              <span className="t-11 muted-2" style={{ lineHeight: 1.4 }}>
+                {CAMERA_PRESETS.find(p => p.id === cameraPreset)?.useCase}
+              </span>
+            )}
+
+            {/* Style bundle picker (Cinema Studio 2.0-like) */}
+            <div className="row gap-2" style={{ marginTop: 8 }}>
+              <span className="section-label">Style bundle</span>
+              <div style={{ flex: 1 }} />
+              {styleBundle && <button className="t-11 muted-2" onClick={() => setStyleBundle(null)} style={{ background:'none', border:'none', cursor:'pointer' }}>clear</button>}
+            </div>
+            <select
+              value={styleBundle || ''}
+              onChange={e => setStyleBundle(e.target.value || null)}
+              className="input"
+              style={{ padding: 8, fontSize: 12, background: 'var(--bg-2)' }}
+            >
+              <option value="">— Aucun bundle (prompt tel quel) —</option>
+              {STYLE_BUNDLES.map(b => (
+                <option key={b.id} value={b.id}>{b.label}</option>
+              ))}
+            </select>
+            {styleBundle && (
+              <span className="t-11 muted-2" style={{ lineHeight: 1.4 }}>
+                {STYLE_BUNDLES.find(b => b.id === styleBundle)?.description}
+              </span>
+            )}
+
+            {/* Prompt final preview */}
+            {(cameraPreset || styleBundle) && (
+              <details className="card" style={{ padding: 8, background: 'var(--bg-1)', marginTop: 6 }}>
+                <summary className="t-11 muted" style={{ cursor: 'pointer' }}>Prompt final ({buildFinalPrompt().length} chars)</summary>
+                <div className="t-11 muted" style={{ marginTop: 6, lineHeight: 1.5, whiteSpace: 'pre-wrap', fontFamily: 'var(--f-mono)' }}>
+                  {buildFinalPrompt()}
+                </div>
+              </details>
+            )}
 
             <div className="row gap-2">
               <span className="section-label">Character refs</span>
