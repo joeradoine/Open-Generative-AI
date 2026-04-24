@@ -6,6 +6,7 @@ import { Badge, I, Kbd } from '@/src/components/studio-chrome';
 import { CHARACTERS, CHAR_BY_ID } from '@/src/data/ivamind-mock';
 import { CAMERA_PRESETS, PRESET_CATEGORIES, FREE_PRESETS } from '@/src/data/camera-presets';
 import { STYLE_BUNDLES, buildStyleHint } from '@/src/data/camera-styles';
+import { pickSmartRefsMulti } from '@/src/lib/ref-picker';
 
 const SHOT_PRESETS = [
   {
@@ -68,44 +69,25 @@ export default function GeneratePage() {
 
   const selectPreset = (p) => { setPreset(p); setPrompt(p.prompt); setTiles([]); setShortlist([]); };
 
-  // Retourne les 4 refs L1 d'un perso (front / 3/4L / 3/4R / profile)
-  const getCharacterL1Refs = (characterId) => [
-    `/character-refs/${characterId}-01-front.png`,          // flat path (existant)
-    `/character-refs/${characterId}/02-three-quarter-left.png`,
-    `/character-refs/${characterId}/03-three-quarter-right.png`,
-    `/character-refs/${characterId}/04-profile.png`,
-  ];
-
-  // Build refs[] smart : best-practice 2026 Gemini = 3-4 refs/perso pour cohérence maximale.
-  // Cap total 4 (MAX_REFS adapter). Logique :
-  //  - customRefs prioritaires (user choice)
-  //  - 1 perso  → 4 refs L1 (front + 3/4L + 3/4R + profile)
-  //  - 2 persos → 2 refs chacun (front + 3/4L)
-  //  - 3-4 persos → 1 ref chacun (front seulement)
-  //  - customRefs remplacent autant de slots bible en partant du bas.
+  // Build refs[] via SMART PICKER — exploite la banque 20 refs/persona selon le contexte shot.
+  // Cap total 4 (MAX_REFS Gemini 2026 best-practice).
+  // Contexte analysé : prompt + camera preset + style bundle → pick 4 refs les + pertinentes.
   const buildRefs = () => {
     const refs = [];
-    customRefs.forEach(r => refs.push({ url: r.dataUrl, role: 'custom', label: r.name }));
+    // custom uploads prioritaires (user override)
+    customRefs.forEach(r => refs.push({ url: r.dataUrl, role: 'custom', label: r.name, reason: 'uploadé par l\'utilisateur' }));
 
-    if (lockToBible) {
-      const chars = preset.characters
-        .map(id => CHAR_BY_ID[id])
-        .filter(c => c && c.refUrl);
-
-      const remaining = 4 - refs.length;
-      if (remaining > 0 && chars.length > 0) {
-        const perChar = chars.length === 1 ? 4 : chars.length === 2 ? 2 : 1;
-        for (const c of chars) {
-          const l1Refs = getCharacterL1Refs(c.id);
-          for (let i = 0; i < perChar && refs.length < 4; i++) {
-            refs.push({
-              url: l1Refs[i],
-              role: 'face',
-              characterId: c.id,
-              angle: ['front', '3/4-left', '3/4-right', 'profile'][i],
-            });
-          }
-        }
+    if (lockToBible && refs.length < 4) {
+      const context = {
+        prompt,
+        camera: CAMERA_PRESETS.find(p => p.id === cameraPreset),
+        style: STYLE_BUNDLES.find(b => b.id === styleBundle),
+      };
+      const smart = pickSmartRefsMulti(preset.characters.filter(id => CHAR_BY_ID[id]?.refUrl), context);
+      // Remplit les slots restants
+      for (const r of smart) {
+        if (refs.length >= 4) break;
+        refs.push(r);
       }
     }
     return refs.slice(0, 4);
@@ -440,14 +422,69 @@ export default function GeneratePage() {
                 );
               })}
             </div>
-            <span className="t-11 muted-2">
-              {(() => {
-                const total = buildRefs().length;
-                return total > 0
-                  ? `→ ${total} ref(s) injected as inline_data · Gemini i2i`
-                  : '→ text-only prompt · Gemini t2i';
-              })()}
-            </span>
+            {(() => {
+              const currentRefs = buildRefs();
+              if (!currentRefs.length) {
+                return <span className="t-11 muted-2">→ text-only prompt · Gemini t2i (cohérence faible)</span>;
+              }
+              return (
+                <div className="col gap-2" style={{ marginTop: 4 }}>
+                  <span className="t-11" style={{ color: 'var(--gold)', fontWeight: 500 }}>
+                    → {currentRefs.length} ref(s) envoyées à Gemini en inline_data
+                  </span>
+                  <div className="row gap-1" style={{ flexWrap: 'wrap' }}>
+                    {currentRefs.map((r, i) => (
+                      <div key={i} style={{
+                        position: 'relative',
+                        width: 48,
+                        height: 64,
+                        borderRadius: 'var(--r-1)',
+                        border: '1px solid var(--gold)',
+                        overflow: 'hidden',
+                        background: 'var(--bg-2)',
+                      }} title={`${r.characterId || r.role} · ${r.angle || r.label || ''}`}>
+                        <img
+                          src={r.url}
+                          alt={r.angle || r.label || 'ref'}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                        />
+                        <div style={{
+                          position: 'absolute',
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          padding: '2px 4px',
+                          background: 'linear-gradient(to top, rgba(10,10,18,0.95), transparent)',
+                          fontSize: 8,
+                          lineHeight: 1.1,
+                          color: 'var(--gold)',
+                          fontFamily: 'var(--f-mono)',
+                          fontWeight: 600,
+                        }}>
+                          {r.angle || r.label?.slice(0, 8) || 'ref'}
+                        </div>
+                        <div style={{
+                          position: 'absolute',
+                          top: 2,
+                          left: 2,
+                          width: 14,
+                          height: 14,
+                          borderRadius: '50%',
+                          background: 'var(--gold)',
+                          color: '#1a1200',
+                          fontSize: 9,
+                          fontWeight: 700,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontFamily: 'var(--f-mono)',
+                        }}>{i + 1}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Upload custom refs */}
             <div className="row gap-2" style={{ marginTop: 8 }}>
