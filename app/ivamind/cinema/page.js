@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { I, Kbd } from '@/src/components/studio-chrome';
 import { CHARACTERS, CHAR_BY_ID } from '@/src/data/ivamind-mock';
 import { CAMERA_PRESETS } from '@/src/data/camera-presets';
-import { STYLE_BUNDLES, buildStyleHint } from '@/src/data/camera-styles';
+import { STYLE_BUNDLES, buildStyleHint, LENS_PRESETS, APERTURE_PRESETS, SENSOR_PRESETS, LIGHTING_PRESETS } from '@/src/data/camera-styles';
 import { parseMentions, mentionsToRefs } from '@/src/lib/mention-parser';
 import { useActiveCharacter, setActiveCharacter } from '@/src/lib/active-character';
 
@@ -43,19 +43,32 @@ export default function CinemaIvamindPage() {
   const [multiShot, setMultiShot] = useState(false);
   const [duration, setDuration] = useState(5);
 
-  // Active model = celui sélectionné selon mode courant
+  // Active model = celui sélectionné selon mode courant (toujours parmi available).
   const activeModel = mode === 'image'
-    ? IMAGE_MODELS.find(m => m.id === imageModelId) || IMAGE_MODELS[0]
-    : VIDEO_MODELS.find(m => m.id === videoModelId) || VIDEO_MODELS[0];
+    ? availableImageModels.find(m => m.id === imageModelId) || availableImageModels[0] || IMAGE_MODELS[0]
+    : availableVideoModels.find(m => m.id === videoModelId) || availableVideoModels[0] || VIDEO_MODELS[0];
   const useNanoBanana2 = imageModelId === 'nano-banana-2';
   const [running, setRunning] = useState(false);
   const [history, setHistory] = useState([]);
   const [customBank, setCustomBank] = useState([]);
   const [focusedId, setFocusedId] = useState(null);
   const [error, setError] = useState(null);
+  const [providersStatus, setProvidersStatus] = useState({}); // { gemini: true, kling: false, seedance: true, ... }
   const activeChar = useActiveCharacter();
 
-  // Load history + customs
+  // Load providers keys status depuis /api/byok/settings/keys
+  // Filter IMAGE_MODELS et VIDEO_MODELS pour ne garder que ceux dont le provider est configured.
+  // Si Joe ajoute une clé dans /ivamind/settings, reload cette page → nouveau modèle dispo auto.
+  const availableImageModels = IMAGE_MODELS.filter(m => providersStatus[m.provider] !== false);
+  const availableVideoModels = VIDEO_MODELS.filter(m => {
+    if (m.provider === 'kling') {
+      // Kling requires both access + secret keys
+      return providersStatus.klingAccessKey !== false && providersStatus.klingSecretKey !== false;
+    }
+    return providersStatus[m.provider] !== false;
+  });
+
+  // Load history + customs + providers keys status
   useEffect(() => {
     try {
       const h = localStorage.getItem(HISTORY_KEY);
@@ -64,6 +77,11 @@ export default function CinemaIvamindPage() {
     fetch('/api/byok/characters/register')
       .then(r => r.json())
       .then(data => setCustomBank(data.characters || []))
+      .catch(() => {});
+    // Providers configured → filter available models
+    fetch('/api/byok/settings/keys')
+      .then(r => r.json())
+      .then(data => setProvidersStatus(data || {}))
       .catch(() => {});
   }, []);
 
@@ -296,13 +314,29 @@ export default function CinemaIvamindPage() {
 
           {/* Bottom tags row — Director Panel tags */}
           <div className="row gap-2" style={{ flexWrap: 'wrap' }}>
-            {/* AI Director pattern : sélecteur MODÈLE sous-jacent */}
+            {/* AI Director pattern : sélecteur MODÈLE sous-jacent — filtré par clés API configurées */}
             {mode === 'image' ? (
-              <TagSelect label="Model" value={imageModelId} onChange={setImageModelId}
-                options={IMAGE_MODELS.map(m => ({ value: m.id, label: `${m.label} · ${m.cost}` }))} />
+              availableImageModels.length > 0 ? (
+                <TagSelect label="Model" value={imageModelId} onChange={setImageModelId}
+                  options={availableImageModels.map(m => ({ value: m.id, label: `${m.label} · ${m.cost}` }))} />
+              ) : (
+                <Link href="/ivamind/settings" className="row gap-2" style={{
+                  padding: '6px 12px', borderRadius: 999,
+                  border: '1px solid var(--red)', background: 'rgba(229,72,77,0.12)',
+                  color: 'var(--red)', fontSize: 11, textDecoration: 'none',
+                }}>⚠ Aucun modèle image configuré → Settings</Link>
+              )
             ) : (
-              <TagSelect label="Model" value={videoModelId} onChange={setVideoModelId}
-                options={VIDEO_MODELS.map(m => ({ value: m.id, label: `${m.label} · ${m.cost}` }))} />
+              availableVideoModels.length > 0 ? (
+                <TagSelect label="Model" value={videoModelId} onChange={setVideoModelId}
+                  options={availableVideoModels.map(m => ({ value: m.id, label: `${m.label} · ${m.cost}` }))} />
+              ) : (
+                <Link href="/ivamind/settings" className="row gap-2" style={{
+                  padding: '6px 12px', borderRadius: 999,
+                  border: '1px solid var(--red)', background: 'rgba(229,72,77,0.12)',
+                  color: 'var(--red)', fontSize: 11, textDecoration: 'none',
+                }}>⚠ Aucun modèle vidéo configuré → Settings</Link>
+              )
             )}
             <TagSelect label="Movement" value={cameraPreset} onChange={setCameraPreset}
               options={[{ value: '', label: 'Static framing' }, ...CAMERA_PRESETS.filter(p => p.category === 'static').map(p => ({ value: p.id, label: p.label }))]} />
